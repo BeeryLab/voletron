@@ -4,6 +4,7 @@ import parse
 import sys
 from core import Dwell, Read, Traversal
 from config import InitialChambers, all_antennae
+import util
 
 """Converts a series of antenna Reads into a series of Traversals, describing
 the movements of each animal from one chamber to another.  The result
@@ -163,13 +164,7 @@ class AnimalTrajectory:
             return
 
         if read.antenna == self.priorRead.antenna:
-            # Avoid knowing whether timestamps are sec, msec, or usec.
-            # TODO: (performance) compute this directly in sec, without
-            # converting back and forth
-            seconds_between_reads = (
-                datetime.datetime.fromtimestamp(read.timestamp)
-                - datetime.datetime.fromtimestamp(self.priorRead.timestamp)
-            ).total_seconds()
+            seconds_between_reads = util.seconds_between_timestamps(read.timestamp, self.priorRead.timestamp)
 
             # TODO: make the dwell time threshold configurable.
             if seconds_between_reads >= 10:
@@ -266,15 +261,15 @@ class AllAnimalTrajectories:
             yield result
 
 
-def main(argv):
-    filename = argv[1]
-    all = AllAnimalTrajectories()
-    all.update_trajectories_from_raw_file(filename)
-    for t in all.traversals():
-        print(t)
-        pass
-
-
-main(sys.argv)
+# def main(argv):
+#     filename = argv[1]
+#     all = AllAnimalTrajectories()
+#     all.update_trajectories_from_raw_file(filename)
+#     for t in all.traversals():
+#         print(t)
+#         pass
+# 
+# 
+# main(sys.argv)
 
 # TODO: specify time range to analyze

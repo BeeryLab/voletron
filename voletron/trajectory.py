@@ -1,15 +1,16 @@
-from collections import namedtuple
 import datetime
-import parse
 import sys
-from core import Dwell, Read, Traversal
-from config import InitialChambers, all_antennae
-import util
+from collections import defaultdict, namedtuple
+from enum import Enum
+
+from voletron.apparatus_config import all_antennae
+from voletron.structs import Antenna, Dwell, Read, Traversal, chamberBetween
+from voletron.util import seconds_between_timestamps
 
 """Converts a series of antenna Reads into a series of Traversals, describing
 the movements of each animal from one chamber to another.  The result
 incorporates heuristics needed to resolve ambiguous situations (i.e., 
-consecitev reads at the same antenna, and skipped reads).
+consecutive reads at the same antenna, and skipped reads).
 
 Note it is not possible to perform the desired analysis in a streaming manner
 using only one pass over the raw inputs.  This is because the sequence of
@@ -39,18 +40,11 @@ def longDwellChamber(antenna):
     return antenna.cage
 
 
-def chamberBetween(antennaA, antennaB):
-    """Determine which chamber is between two Antennae."""
-    if antennaA == antennaB:
-        raise ValueError("There is no chamber between an antenna and itself")
-    i = list(set([antennaA.tube, antennaA.cage]) & set([antennaB.tube, antennaB.cage]))
-    if not i:
-        return None
-    if len(i) != 1:
-        raise ValueError(
-            "Impossible: There can't be more than one chamber between two antennae"
-        )
-    return i[0]
+class TwoMissingReadsException(Exception):
+    def __init__(self, ambiguous_seconds, readA, readB):
+        self.ambiguous_seconds = ambiguous_seconds
+        self.readA = readA
+        self.readB = readB
 
 
 def inferMissingRead(readA, readB):
@@ -64,44 +58,57 @@ def inferMissingRead(readA, readB):
     which we expect will never occur.
 
     There is no way to know the true timestamp of the missed Read.  It could be
-    anywhere between the timestamp of Read A and that of Read B.  Here, as a 
-    simple heuristic, we assign the time halfway between the two known reads to
-    the inferred read.  This is supported by the observation (from independent
-    video data) that the voles spend about half of their time in tubes, and
-    about half in cages (or in the arena).
+    anywhere between the timestamp of Read A and that of Read B.
+
+    On the one hand, we know (from independent video data) that the voles spend
+    about half of their time in tubes, and about half in cages (or in the
+    arena).  That argument might support allocating the time equally.
+
+    However: if the voles spent any significant time in the tube, we would
+    expect more reads there.  Thus, as a simple heuristic, we allocate all of
+    the ambiguous time to the arena.
 
     Args:
         readA: The first (earlier) read of the non-adjacent pair.
         readB: The second (later) read of the non-adjacent pair.
-    
+
     Returns: A Read that can be inserted between reads A and B, to produce a
         consistent trajectory.
     """
     for antenna in all_antennae:
         if antenna.tube == readA.antenna.tube and antenna.cage == readB.antenna.cage:
             # Tube => Arena case.
-            # TODO: consider best allocation
-            infer_timestamp = (readA.timestamp + readB.timestamp) / 2
-            # print("{} -> {} <- {}".format(readA.timestamp, infer_timestamp, readB.timestamp))
+            infer_timestamp = readA.timestamp + 0.001  # Add 1 ms to enforce sort order
             return Read(readA.tag_id, infer_timestamp, antenna)
         elif antenna.cage == readA.antenna.cage and antenna.tube == readB.antenna.tube:
             # Arena => Tube case.
-            # TODO: consider best allocation
-            infer_timestamp = (readA.timestamp + readB.timestamp) / 2
+            infer_timestamp = (
+                readB.timestamp - 0.001
+            )  # Subtract 1 ms to enforce sort order
             return Read(readA.tag_id, infer_timestamp, antenna)
-    raise ValueError(
-        "Failed to infer missing read between:\n{}\n{}".format(readA, readB)
-    )
+
+    ambiguous_seconds = readB.timestamp - readA.timestamp
+    raise TwoMissingReadsException(ambiguous_seconds, readA, readB)
 
 
-class AnimalTrajectory:
+class ReadFate(Enum):
+    Long_Cage = 0
+    Short_Tube = 1
+    Move = 2
+    OneMissing = 3
+    TwoMissing = 4
+
+
+class _AnimalTrajectory:
     """Tracks the path of a single animal through the apparatus over time."""
 
-    def __init__(self, tag_id, initial_chamber):
+    def __init__(self, tag_id, initial_chamber, start_time):
         self.tag_id = tag_id
         self.chamber = initial_chamber
-        self.dwells = []
-        self.priorRead = None
+        self.dwells = [
+            Dwell(start_time, start_time, None)
+        ]  # The animal was outside the apparatus before the experiment
+        self.priorRead = Read(tag_id, start_time, Antenna(None, initial_chamber))
 
     def _appendDwell(self, begin, end, chamber):
         """
@@ -128,10 +135,10 @@ class AnimalTrajectory:
                 begin = lastDwell.begin
         self.dwells.append(Dwell(begin, end, chamber))
 
-    def updateFromRead(self, read):
+    def updateFromRead(self, read) -> ReadFate:
         """
         Extends the tracked Trajectory based on a new Read.
-        
+
         Compares this read to the previous one, to determine where the animal
         was in between the two reads.
 
@@ -144,10 +151,13 @@ class AnimalTrajectory:
               time greater than or equal to 10 sec, choose another chamber
               (i.e., the adjoining cage or arena).
             * When the reads are from non-adjacent antennae, that means that the
-              animal passed at least one antenna without a read being taken.  In
-              this case we infer the missing read, and insert it into the read
-              stream in order to produce a consistent trajectory.
-    
+              animal passed at least one antenna without a read being taken.  If
+              only one antenna is between the two observed ones, we infer the
+              missing read, and insert it into the read stream in order to
+              produce a consistent trajectory.  If there are two missing reads,
+              we effectively disappear the animal for the time between the two
+              surrounding reads.
+
         Args:
             read: a Read object representing the presence of the animal at an
               Antenna.
@@ -155,37 +165,55 @@ class AnimalTrajectory:
         if read.tag_id != self.tag_id:
             raise ValueError("Can't update trajectory with Read from the wrong tag.")
 
-        if self.priorRead and read.timestamp < self.priorRead.timestamp:
-            raise ValueError("Reads must arrive in chronological order")
+        if read.timestamp < self.priorRead.timestamp:
+            raise ValueError(
+                "Reads must arrive in chronological order: {} <= {}.  {}  {}".format(
+                    read.timestamp, self.priorRead.timestamp, self.priorRead, read
+                )
+            )
 
         if not self.priorRead:
-            self.priorRead = read
-            # Neglect the initial stay in the Arena.
-            return
+            raise ValueError("There must be a prior read.")
 
         if read.antenna == self.priorRead.antenna:
-            seconds_between_reads = util.seconds_between_timestamps(read.timestamp, self.priorRead.timestamp)
+            seconds_between_reads = seconds_between_timestamps(
+                read.timestamp, self.priorRead.timestamp
+            )
 
             # TODO: make the dwell time threshold configurable.
             if seconds_between_reads >= 10:
                 dwellChamber = longDwellChamber(read.antenna)
+                fate = ReadFate.Long_Cage
             else:
                 dwellChamber = shortDwellChamber(read.antenna)
+                fate = ReadFate.Short_Tube
         else:
             dwellChamber = chamberBetween(self.priorRead.antenna, read.antenna)
-            if not dwellChamber:
+            if dwellChamber:
+                fate = ReadFate.Move
+            else:  # At least one missing read
                 try:
                     missingRead = inferMissingRead(self.priorRead, read)
-                    self.updateFromRead(missingRead)
-                    self.updateFromRead(read)
-                    return
-                except ValueError as e:
-                    print(e)
+                    a = self.updateFromRead(missingRead)
+                    assert a == ReadFate.Move
+                    # b = self.updateFromRead(read)
+                    # assert b == ReadFate.Move
+                    dwellChamber = chamberBetween(missingRead.antenna, read.antenna)
+                    fate = ReadFate.OneMissing
+                except TwoMissingReadsException:
+                    # TODO: configurable warning threshold
+                    # if e.ambiguous_seconds > 60:
+                    # print(
+                    #     "Missing reads, {:.2f} sec\n\t{}\n\t{}".format(
+                    #         e.ambiguous_seconds, e.readA, e.readB
+                    #     )
+                    # )
                     dwellChamber = "ERROR"
+                    fate = ReadFate.TwoMissing
 
         self._appendDwell(self.priorRead.timestamp, read.timestamp, dwellChamber)
-
         self.priorRead = read
+        return fate
 
     def traversals(self):
         """
@@ -196,39 +224,69 @@ class AnimalTrajectory:
             A stream of Traversal objects for a single animal, in chronological
             order.
         """
+        # Neglect the first "Dwell", which was outside the apparatus
         for (i, d) in enumerate(self.dwells):
-            yield Traversal(d.begin, self.tag_id, self.dwells[i - 1].chamber, d.chamber)
+            if i:
+                yield Traversal(
+                    d.begin, self.tag_id, self.dwells[i - 1].chamber, d.chamber
+                )
+
+    def long_dwells(self):
+        for d in self.dwells:
+            dwell_time = d.end - d.begin
+            if dwell_time > 60 * 60 * 4:  # 6 hours
+                yield [self.tag_id, d.chamber, d.begin, dwell_time / 60]
+
+    def time_per_chamber(self, analysis_start_time, analysis_end_time):
+        chamber_times = defaultdict(lambda: 0)
+        for d in self.dwells:
+            begin = max(d.begin, analysis_start_time)
+            end = min(d.end, analysis_end_time)
+            if end > begin:
+                chamber_times[d.chamber] += end - begin
+        return chamber_times
+
+    def get_locations_between(self, analysis_start_time, analysis_end_time):
+        chambers = []
+        for d in self.dwells:
+            begin = max(d.begin, analysis_start_time)
+            end = min(d.end, analysis_end_time)
+            if end > begin:
+                chambers.append(d.chamber)
+        return chambers
 
 
 class AllAnimalTrajectories:
     """
     Tracks the trajectories of all animals through the apparatus, based on
-    reading a file of 'raw' antenna reads.
+    a sequence of antenna reads.
     """
 
-    def __init__(self):
-        # {tag_id: AnimalTrajectory}
-        # self.animalTrajectories = dict(
-        #    map(lambda x: [x[0], AnimalTrajectory(x[0], x[1])], InitialChambers.items())
-        # )
+    def __init__(self, start_time, tag_id_to_start_chamber, reads_per_animal):
         self.animalTrajectories = {
-            tag_id: AnimalTrajectory(tag_id, initialChamber)
-            for (tag_id, initialChamber) in InitialChambers.items()
+            tag_id: _AnimalTrajectory(tag_id, initialChamber, start_time)
+            for [tag_id, initialChamber] in tag_id_to_start_chamber.items()
         }
-
-    # TODO: factor file reading and parsing out; this should accept an iterable of Reads.
-    def update_trajectories_from_raw_file(self, filename):
-        with open(filename) as file:
-            file.readline()
-            # skip headers
-            for line in file:
-                read = parse.parse_raw_line(line.rstrip())
-                if read:
-                    try:
-                        animalTrajectory = self.animalTrajectories[read.tag_id]
-                        animalTrajectory.updateFromRead(read)
-                    except KeyError:
-                        print("UNKNOWN TAG: {}".format(read.tag_id))
+        fate_counts = {member: 0 for fate, member in ReadFate.__members__.items()}
+        end_time = max([reads[-1].timestamp for reads in reads_per_animal.values()])
+        for [tag_id, reads] in reads_per_animal.items():
+            animalTrajectory = self.animalTrajectories[tag_id]
+            for read in reads:
+                fate = animalTrajectory.updateFromRead(read)
+                fate_counts[fate] += 1
+                last_read = read
+            end_read = Read(last_read.tag_id, end_time, last_read.antenna)
+            fate = animalTrajectory.updateFromRead(end_read)
+            fate_counts[fate] += 1
+        count = sum(fate_counts.values())
+        fate_percent = {
+            key.name: "{:>8} ({:>6.2%})".format(value, value / count)
+            for key, value in fate_counts.items()
+        }
+        print("\nRead Interpretations:")
+        print("-----------------------------")
+        for [key, value] in fate_percent.items():
+            print("{:>10}: {}".format(key, value))
 
     def traversals(self):
         """
@@ -243,14 +301,13 @@ class AllAnimalTrajectories:
             A stream of Traversal objects for all animals, in chronological
             order.
         """
-        # traversalsPerAnimal = map(
-        #    lambda x: (x[0], x[1].traversals), self.animalTrajectories.items()
-        # )
         traversalsPerAnimal = {
             tag_id: traj.traversals()
             for (tag_id, traj) in self.animalTrajectories.items()
         }
-        peeks = {tag_id: trav.__next__() for (tag_id, trav) in traversalsPerAnimal.items()}
+        peeks = {
+            tag_id: trav.__next__() for (tag_id, trav) in traversalsPerAnimal.items()
+        }
         while peeks:
             next_tag_id = min(peeks, key=(lambda x: peeks[x].timestamp))
             result = peeks[next_tag_id]
@@ -260,16 +317,5 @@ class AllAnimalTrajectories:
                 del peeks[next_tag_id]
             yield result
 
-
-# def main(argv):
-#     filename = argv[1]
-#     all = AllAnimalTrajectories()
-#     all.update_trajectories_from_raw_file(filename)
-#     for t in all.traversals():
-#         print(t)
-#         pass
-# 
-# 
-# main(sys.argv)
-
-# TODO: specify time range to analyze
+    def get_locations_between(self, tag_id, begin, end):
+        return self.animalTrajectories[tag_id].get_locations_between(begin, end)

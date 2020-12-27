@@ -1,0 +1,81 @@
+from voletron.structs import Read, chamberBetween
+
+
+def preprocess_reads(reads, tag_ids, tag_id_to_name):
+    reads_per_animal = split_reads_per_animal(reads, tag_ids)
+
+    print("\nPreprocessing:")
+    print("-----------------------------")
+    for [tag_id, animal_reads] in reads_per_animal.items():
+        # mutating
+        spaced_reads(animal_reads)
+        parsimonious_reads(tag_id, animal_reads, tag_id_to_name)
+    return reads_per_animal
+
+
+def split_reads_per_animal(reads, tag_ids):
+    result = {tag_id: [] for tag_id in tag_ids}
+    for read in reads:
+        try:
+            result[read.tag_id].append(read)
+        except KeyError:
+            print("    *** UNKNOWN TAG: {} ***".format(read.tag_id))
+    return result
+
+
+def spaced_reads(reads):
+    # Two exactly simultaneous reads are not impossible, because the sensors
+    # are slow and effectively add noise in time.
+    # To deal with this, we simply add 2 ms to the second read.
+    # We do this to leave room for a possible "missing read" between them.
+    # It may be that the two near-simultaneous reads end up out of order.
+    # In this case, most likely, two additional reads would be inferred,
+    # making it appear that the animal rapidly zig-zagged about.
+    # The "parsimony" transformation below resolves these situations by swapping the two reads in time.
+    for i in range(0, len(reads) - 1):
+        [a, b] = reads[i : i + 2]
+        b_orig = b.timestamp
+
+        if abs(b.timestamp - a.timestamp) < 0.002:
+            b_new = ((a.timestamp * 1000) + 2) / 1000  # float precision shenanigans
+            b = Read(b.tag_id, b_new, b.antenna)
+            reads[i + 1] = b
+            jitter = b_new - b_orig
+            # print("Jitter: {}: {} -> {} ({})".format(a.timestamp, b_orig, b_new, jitter))
+            if jitter > 0.003:
+                print("Jitter > 3 msec!")
+
+
+def parsimonious_reads(tag_id, reads, tag_id_to_name):
+    count = 0
+    for i in range(0, len(reads) - 4):
+        [a, b, c, d] = reads[i : i + 4]
+        if abs(c.timestamp - b.timestamp) < 0.010:
+            # Middle two reads are close enough to consider swapping them, if parsimonious.
+            # Each of this values is True if the read pair is parsimonious, false otherwise
+            ab = a.antenna == b.antenna or (
+                chamberBetween(a.antenna, b.antenna) != None
+            )
+            ac = a.antenna == c.antenna or (
+                chamberBetween(a.antenna, c.antenna) != None
+            )
+            bc = b.antenna == c.antenna or (
+                chamberBetween(b.antenna, c.antenna) != None
+            )
+            bd = b.antenna == d.antenna or (
+                chamberBetween(b.antenna, d.antenna) != None
+            )
+            cd = c.antenna == d.antenna or (
+                chamberBetween(c.antenna, d.antenna) != None
+            )
+
+            if bc == None:
+                print("Simultaneous disparate reads: {} {}".format(b, c))
+            else:
+                if ac + bd > ab + cd:  # Greater parsimony if we swap b and c
+                    count += 1
+                    c_earlier = Read(c.tag_id, b.timestamp, c.antenna)
+                    b_later = Read(b.tag_id, c.timestamp, b.antenna)
+                    reads[i : i + 4] = [a, c_earlier, b_later, d]
+
+    print("Parsimony swaps: {} {}".format(tag_id_to_name[tag_id], count))

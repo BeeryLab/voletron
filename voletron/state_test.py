@@ -62,8 +62,8 @@ class TestState(unittest.TestCase):
         self.assertEqual(
             dict(s.co_dwells["tag_a"]),
             {
-                "tag_a": [CoDwell(begin=100, end=200, chamber=None)],
-                "tag_b": [CoDwell(begin=100, end=200, chamber=None)],
+                "tag_a": [CoDwell(start=100, end=200, chamber=None)],
+                "tag_b": [CoDwell(start=100, end=200, chamber=None)],
             },
         )
 

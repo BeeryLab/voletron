@@ -110,7 +110,7 @@ class _AnimalTrajectory:
         ]  # The animal was outside the apparatus before the experiment
         self.priorRead = Read(tag_id, start_time, Antenna(None, initial_chamber))
 
-    def _appendDwell(self, begin, end, chamber):
+    def _appendDwell(self, start, end, chamber):
         """
         Records that the animal was in a chamber during a time interval.
 
@@ -124,16 +124,16 @@ class _AnimalTrajectory:
         """
         if self.dwells:
             lastDwell = self.dwells[-1]
-            if lastDwell.end != begin:
+            if lastDwell.end != start:
                 raise ValueError(
                     "Consecutive dwells are not adjacent.\n{}\n{}".format(
-                        lastDwell.end, begin
+                        lastDwell.end, start
                     )
                 )
             if lastDwell.chamber == chamber:
                 self.dwells.pop()
-                begin = lastDwell.begin
-        self.dwells.append(Dwell(begin, end, chamber))
+                start = lastDwell.start
+        self.dwells.append(Dwell(start, end, chamber))
 
     def updateFromRead(self, read) -> ReadFate:
         """
@@ -228,30 +228,30 @@ class _AnimalTrajectory:
         for (i, d) in enumerate(self.dwells):
             if i:
                 yield Traversal(
-                    d.begin, self.tag_id, self.dwells[i - 1].chamber, d.chamber
+                    d.start, self.tag_id, self.dwells[i - 1].chamber, d.chamber
                 )
 
     def long_dwells(self):
         for d in self.dwells:
-            dwell_time = d.end - d.begin
+            dwell_time = d.end - d.start
             if dwell_time > 60 * 60 * 4:  # 6 hours
-                yield [self.tag_id, d.chamber, d.begin, dwell_time / 60]
+                yield [self.tag_id, d.chamber, d.start, dwell_time / 60]
 
     def time_per_chamber(self, analysis_start_time, analysis_end_time):
         chamber_times = defaultdict(lambda: 0)
         for d in self.dwells:
-            begin = max(d.begin, analysis_start_time)
+            start = max(d.start, analysis_start_time)
             end = min(d.end, analysis_end_time)
-            if end > begin:
-                chamber_times[d.chamber] += end - begin
+            if end > start:
+                chamber_times[d.chamber] += end - start
         return chamber_times
 
     def get_locations_between(self, analysis_start_time, analysis_end_time):
         chambers = []
         for d in self.dwells:
-            begin = max(d.begin, analysis_start_time)
+            start = max(d.start, analysis_start_time)
             end = min(d.end, analysis_end_time)
-            if end > begin:
+            if end > start:
                 chambers.append(d.chamber)
         return chambers
 
@@ -317,5 +317,5 @@ class AllAnimalTrajectories:
                 del peeks[next_tag_id]
             yield result
 
-    def get_locations_between(self, tag_id, begin, end):
-        return self.animalTrajectories[tag_id].get_locations_between(begin, end)
+    def get_locations_between(self, tag_id, start, end):
+        return self.animalTrajectories[tag_id].get_locations_between(start, end)

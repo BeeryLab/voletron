@@ -15,12 +15,12 @@ Validation = NamedTuple(
 
 # One timespan of presence of an animal in a given chamber.  The animal ID is
 # not given, because these records are used only within an AnimalTrajectory.
-# `begin` and `end` are timestamps.  `chamber` is the string ID of the tube or
+# `start` and `end` are timestamps.  `chamber` is the string ID of the tube or
 # cage where the animal stayed during this time.
-Dwell = NamedTuple("Dwell", [("begin", int), ("end", int), ("chamber", str)])
+Dwell = NamedTuple("Dwell", [("start", int), ("end", int), ("chamber", str)])
 
 # Structurally the same as a Dwell, but describes pairs of animals
-CoDwell = NamedTuple("CoDwell", [("begin", int), ("end", int), ("chamber", str)])
+CoDwell = NamedTuple("CoDwell", [("start", int), ("end", int), ("chamber", str)])
 
 # One instance of an animal crossing from one chamber (tube or cage) to another.
 # This extends the idea of a `Read`, because here the direction of travel is

@@ -225,13 +225,13 @@ class TestAnimalTrajectory(unittest.TestCase):
         self.assertEqual(
             t.dwells,
             [
-                Dwell(begin=100, end=100, chamber=None),
-                Dwell(begin=100, end=200, chamber="ArenaA"),
-                Dwell(begin=200, end=300, chamber="Tube1"),
-                Dwell(begin=300, end=30300, chamber="Cage1"),
-                Dwell(begin=30300, end=30300.001, chamber="Tube1"),
-                Dwell(begin=30300.001, end=90300.001, chamber="ArenaA"),
-                Dwell(begin=90300.001, end=100000, chamber="Tube2"),
+                Dwell(start=100, end=100, chamber=None),
+                Dwell(start=100, end=200, chamber="ArenaA"),
+                Dwell(start=200, end=300, chamber="Tube1"),
+                Dwell(start=300, end=30300, chamber="Cage1"),
+                Dwell(start=30300, end=30300.001, chamber="Tube1"),
+                Dwell(start=30300.001, end=90300.001, chamber="ArenaA"),
+                Dwell(start=90300.001, end=100000, chamber="Tube2"),
             ],
         )
 
@@ -262,13 +262,13 @@ class TestAnimalTrajectory(unittest.TestCase):
         self.assertEqual(
             t.dwells,
             [
-                Dwell(begin=100, end=100, chamber=None),
-                Dwell(begin=100, end=200, chamber="ArenaA"),
-                Dwell(begin=200, end=600, chamber="Tube1"),
-                Dwell(begin=600, end=700, chamber="Cage1"),
-                Dwell(begin=700, end=700.001, chamber="Tube1"),
-                Dwell(begin=700.001, end=800, chamber="ArenaA"),
-                Dwell(begin=800, end=900, chamber="Tube2"),
+                Dwell(start=100, end=100, chamber=None),
+                Dwell(start=100, end=200, chamber="ArenaA"),
+                Dwell(start=200, end=600, chamber="Tube1"),
+                Dwell(start=600, end=700, chamber="Cage1"),
+                Dwell(start=700, end=700.001, chamber="Tube1"),
+                Dwell(start=700.001, end=800, chamber="ArenaA"),
+                Dwell(start=800, end=900, chamber="Tube2"),
             ],
         )
 
@@ -300,13 +300,13 @@ class TestAnimalTrajectory(unittest.TestCase):
         self.assertEqual(
             t.dwells,
             [
-                Dwell(begin=100, end=100, chamber=None),
-                Dwell(begin=100, end=200, chamber="ArenaA"),
-                Dwell(begin=200, end=600, chamber="Tube1"),
-                Dwell(begin=600, end=700, chamber="Cage1"),
-                Dwell(begin=700, end=700.001, chamber="Tube1"),
-                Dwell(begin=700.001, end=800, chamber="ArenaA"),
-                Dwell(begin=800, end=900, chamber="Tube2"),
+                Dwell(start=100, end=100, chamber=None),
+                Dwell(start=100, end=200, chamber="ArenaA"),
+                Dwell(start=200, end=600, chamber="Tube1"),
+                Dwell(start=600, end=700, chamber="Cage1"),
+                Dwell(start=700, end=700.001, chamber="Tube1"),
+                Dwell(start=700.001, end=800, chamber="ArenaA"),
+                Dwell(start=800, end=900, chamber="Tube2"),
             ],
         )
 

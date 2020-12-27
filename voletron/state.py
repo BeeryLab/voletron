@@ -45,10 +45,10 @@ class State:
         if traversal.dest and traversal.dest != "ERROR":
             self.chambers[traversal.dest].arrive(traversal.timestamp, traversal.tag_id)
 
-    def _record_co_dwell(self, tag_id_a, tag_id_b, begin, end):  # chamber
+    def _record_co_dwell(self, tag_id_a, tag_id_b, start, end):  # chamber
         if tag_id_a > tag_id_b:
             (tag_id_a, tag_id_b) = (tag_id_b, tag_id_a)
-        self.co_dwells[tag_id_a][tag_id_b].append(CoDwell(begin, end, None))
+        self.co_dwells[tag_id_a][tag_id_b].append(CoDwell(start, end, None))
 
     def end(self):
         self.end_was_called = True
@@ -89,7 +89,7 @@ class State:
         cds = self._get_co_dwells(
             tag_id_a, tag_id_b, analysis_start_time, analysis_end_time
         )
-        durations = [seconds_between_timestamps(cd.begin, cd.end) for cd in cds]
+        durations = [seconds_between_timestamps(cd.start, cd.end) for cd in cds]
         return [len(durations), sum(durations)]
 
     def _get_co_dwells(
@@ -103,8 +103,8 @@ class State:
 
 
 def restrict_co_dwell(codwell, analysis_start_time, analysis_end_time):
-    begin = max(codwell.begin, analysis_start_time)
+    start = max(codwell.start, analysis_start_time)
     end = min(codwell.end, analysis_end_time)
-    if end > begin:
-        return CoDwell(begin, end, codwell.chamber)
+    if end > start:
+        return CoDwell(start, end, codwell.chamber)
     return None

@@ -319,7 +319,26 @@ class TestAnimalTrajectory(unittest.TestCase):
             },
         )
 
+    def test_get_locations_between(self):
+        t = _AnimalTrajectory("tag_a", "ArenaA", 100)
 
+        t.updateFromRead(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
+        t.updateFromRead(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
+        t.updateFromRead(
+            Read("tag_a", 305, Antenna("Tube1", "Cage1"))
+        )  # Short (< 10 sec)
+        t.updateFromRead(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
+        t.updateFromRead(Read("tag_a", 600, Antenna("Tube2", "ArenaA")))
+        t.updateFromRead(Read("tag_a", 700, Antenna("Tube2", "Cage2")))  
+        t.updateFromRead(Read("tag_a", 800, Antenna("Tube2", "Cage2")))  # Long
+        t.updateFromRead(Read("tag_a", 900, Antenna("Tube2", "ArenaA")))  # OneMissing
+        t.updateFromRead(Read("tag_a", 1000, Antenna("Tube3", "ArenaA")))
+
+        self.assertEqual(t.get_locations_between(0, 1100), ["ArenaA", "Tube1", "ArenaA", "Tube2", "Cage2", "Tube2", "ArenaA"])
+        self.assertEqual(t.get_locations_between(150, 750), ["ArenaA", "Tube1", "ArenaA", "Tube2", "Cage2"])
+        self.assertEqual(t.get_locations_between(325, 610), ['Tube1', 'ArenaA', 'Tube2'])
+
+ 
 class TestAllAnimalTrajectories(unittest.TestCase):
     def test_traversals(self):
         start_time = 100

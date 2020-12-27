@@ -1,6 +1,14 @@
 syntax: glob
 
 env
+htmlcov
+.ropeproject
+.coverage
+voletron.egg-info
+
+raw
+raw_cohort_1
+raw_orig
 
 ## General temp files
 

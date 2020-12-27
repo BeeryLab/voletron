@@ -43,8 +43,10 @@ class TestPreprocessReads(unittest.TestCase):
             Read("tag_a", 300, Antenna("Tube4", "ArenaA")),
             Read("tag_a", 300.002, Antenna("Tube4", "Cage4")),
         ]
+        tag_id_to_name = {"tag_a": "Animal A"}
+
         # mutating
-        parsimonious_reads("tag_id", reads)
+        parsimonious_reads("tag_a", reads, tag_id_to_name)
 
         self.assertEqual(
             reads,

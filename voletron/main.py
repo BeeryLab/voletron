@@ -4,12 +4,14 @@ import os
 import sys
 
 from voletron.apparatus_config import all_chambers
+from voletron.output import writeChamberTimes, writeCohabs, writeLongDwells
 from voletron.parse_config import parse_config, parse_validation
 from voletron.parse_olcus import parse_first_read, parse_raw_dir
 from voletron.preprocess_reads import preprocess_reads
 from voletron.state import State
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
+from voletron.validate import validate
 
 
 def main(argv):
@@ -103,7 +105,6 @@ def main(argv):
     out_dir = os.path.join(olcusDir, "voletron")
     os.makedirs(out_dir)
 
-    # TODO: Perform validation
     # Validation
     validate(out_dir, exp_name, trajectories, args.validation, config.tag_id_to_name)
 
@@ -115,86 +116,6 @@ def main(argv):
     )
     writeLongDwells(config, out_dir, exp_name, trajectories)
 
-
-# def writeFullHistory(config, out_dir, exp_name, state):
-#    with open(os.path.join(out_dir, exp_name+'.states.csv'), "w") as f:
-#         f.write("Animal A,Animal B,dwells\nseconds\n")
-#         for (a, b, c, d) in state.co_dwell_stats(config.tag_id_to_name.keys()):
-#             f.write("{},{},{},{}\n".format(config.tag_id_to_name[a], config.tag_id_to_name[b], c, d))
-
-
-def validate(out_dir, exp_name, trajectories, filename, tag_id_to_name):
-    print("\nValidation:")
-    print("-----------------------------")
-    if not filename:
-        print("No validation file provided")
-        return
-
-    validations = parse_validation(
-        filename, {v: k for (k, v) in tag_id_to_name.items()}
-    )
-
-    with open(os.path.join(out_dir, exp_name + ".validate.csv"), "w") as f:
-        f.write("Correct,Timestamp,AnimalID,Expected,Observed\n")
-        correct = 0
-        for v in validations:
-            # Charitably use a 2-minute window
-            actual = trajectories.get_locations_between(
-                v.tag_id, v.timestamp - 30, v.timestamp + 90
-            )
-            ok = v.chamber in actual
-            correct += ok
-
-            f.write("{},{},{},{},{}\n".format(ok,format_time(v.timestamp),tag_id_to_name[v.tag_id], v.chamber, actual))
-
-    print(
-        "{} of {} ({:>6.2%}) validation points correct.".format(
-            correct, len(validations), correct / len(validations)
-        )
-    )
-
-
-def writeCohabs(
-    config, out_dir, exp_name, state, analysis_start_time, analysis_end_time
-):
-    with open(os.path.join(out_dir, exp_name + ".cohab.csv"), "w") as f:
-        f.write("Animal A,Animal B,dwells,seconds\n")
-        for (a, b, c, d) in state.co_dwell_stats(
-            config.tag_id_to_name.keys(), analysis_start_time, analysis_end_time
-        ):
-            f.write(
-                "{},{},{},{:.0f}\n".format(
-                    config.tag_id_to_name[a], config.tag_id_to_name[b], c, d
-                )
-            )
-
-
-def writeChamberTimes(
-    config, out_dir, exp_name, trajectories, analysis_start_time, analysis_end_time
-):
-    with open(os.path.join(out_dir, exp_name + ".chambers.csv"), "w") as f:
-        f.write("animal," + ",".join(all_chambers) + ",total\n")
-        for (tag_id, trajectory) in trajectories.animalTrajectories.items():
-            ct = trajectory.time_per_chamber(analysis_start_time, analysis_end_time)
-            # f.write("{}, {:.0f}".format(config.tag_id_to_name[tag_id], sum(ct.values())))
-            aaa = ",".join(map(lambda c: "{:.0f}".format(ct[c]), all_chambers))
-            f.write(
-                "{},{},{:.0f}\n".format(
-                    config.tag_id_to_name[tag_id], aaa, sum(ct.values())
-                )
-            )
-
-
-def writeLongDwells(config, out_dir, exp_name, trajectories):
-    with open(os.path.join(out_dir, exp_name + ".longdwells.csv"), "w") as f:
-        f.write("animal,chamber,start_time,seconds\n")
-        for trajectory in trajectories.animalTrajectories.values():
-            for d in trajectory.long_dwells():
-                f.write(
-                    "{},{},{},{:.0f}\n".format(
-                        config.tag_id_to_name[d[0]], d[1], format_time(d[2]), d[3]
-                    )
-                )
 
 
 main(sys.argv)

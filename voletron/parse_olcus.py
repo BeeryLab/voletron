@@ -61,19 +61,16 @@ def parse_first_read(dirname):
 
     Returns: a Read.
     """
-    owd = os.getcwd()
-    os.chdir(dirname)
     # The files have names rawYYYYMMDD.csv, so lexicographical sort is also
     # chronological sort.
-    files = sorted(glob.glob("raw*.csv"))
+    files = sorted(glob.glob(os.path.join(dirname, "raw*.csv")))
     with open(files[0]) as file:
         file.readline()  # skip headers
         line = file.readline()
         read = None
         while not read:
             read = parse_raw_line(line)
-        os.chdir(owd)
-        return read
+    return read
 
 
 def parse_raw_dir(dirname):

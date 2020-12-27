@@ -8,7 +8,7 @@ from voletron.trajectory import (
     TwoMissingReadsException,
     _AnimalTrajectory,
     chamberBetween,
-    inferMissingRead,
+    infer_missing_read,
 )
 
 
@@ -33,14 +33,14 @@ class TestTrajectoryUtils(unittest.TestCase):
         readB = Read("tag_a", 23456, Antenna("Tube3", "Cage3"))
 
         with self.assertRaises(TwoMissingReadsException):
-            inferMissingRead(readA, readB)
+            infer_missing_read(readA, readB)
 
     def test_infer_missing_tube_arena(self):
         # Note: this depends on the global apparatus_config.all_antennae
         readA = Read("tag_a", 12345, Antenna("Tube1", "Cage1"))
         readB = Read("tag_a", 23456, Antenna("Tube3", "ArenaA"))
 
-        inferred = inferMissingRead(readA, readB)
+        inferred = infer_missing_read(readA, readB)
         self.assertEqual(inferred.tag_id, "tag_a")
         self.assertEqual(inferred.timestamp, 12345.001)
         self.assertEqual(inferred.antenna, Antenna("Tube1", "ArenaA"))
@@ -50,7 +50,7 @@ class TestTrajectoryUtils(unittest.TestCase):
         readA = Read("tag_a", 12345, Antenna("Tube3", "ArenaA"))
         readB = Read("tag_a", 23456, Antenna("Tube1", "Cage1"))
 
-        inferred = inferMissingRead(readA, readB)
+        inferred = infer_missing_read(readA, readB)
         self.assertEqual(inferred.tag_id, "tag_a")
         self.assertEqual(inferred.timestamp, 23455.999)
         self.assertEqual(inferred.antenna, Antenna("Tube1", "ArenaA"))
@@ -61,7 +61,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         t = _AnimalTrajectory("tag_a", "ArenaA", 12345)
 
         readA = Read("tag_a", 23456, Antenna("Tube1", "ArenaA"))
-        fate = t.updateFromRead(readA)
+        fate = t.update_from_read(readA)
         self.assertEqual(fate, ReadFate.Move)
         self.assertEqual(
             t.dwells, [Dwell(12345, 12345, None), Dwell(12345, 23456, "ArenaA")]
@@ -72,7 +72,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
         readB = Read("tag_a", 34567, Antenna("Tube1", "Cage1"))
-        fate = t.updateFromRead(readB)
+        fate = t.update_from_read(readB)
         self.assertEqual(fate, ReadFate.Move)
         self.assertEqual(
             t.dwells,
@@ -94,8 +94,8 @@ class TestAnimalTrajectory(unittest.TestCase):
         t = _AnimalTrajectory("tag_a", "ArenaA", 12345)
 
         antenna = Antenna("Tube1", "ArenaA")
-        t.updateFromRead(Read("tag_a", 23456, antenna))
-        fate = t.updateFromRead(Read("tag_a", 23460, antenna))
+        t.update_from_read(Read("tag_a", 23456, antenna))
+        fate = t.update_from_read(Read("tag_a", 23460, antenna))
         self.assertEqual(fate, ReadFate.Short_Tube)
 
         self.assertEqual(
@@ -112,8 +112,8 @@ class TestAnimalTrajectory(unittest.TestCase):
         t = _AnimalTrajectory("tag_a", "ArenaA", 12345)
 
         antenna = Antenna("Tube1", "ArenaA")
-        t.updateFromRead(Read("tag_a", 23456, antenna))
-        fate = t.updateFromRead(Read("tag_a", 34567, antenna))
+        t.update_from_read(Read("tag_a", 23456, antenna))
+        fate = t.update_from_read(Read("tag_a", 34567, antenna))
         self.assertEqual(fate, ReadFate.Long_Cage)
 
         self.assertEqual(
@@ -128,8 +128,8 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_move(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 12345)
 
-        t.updateFromRead(Read("tag_a", 23456, Antenna("Tube1", "ArenaA")))
-        fate = t.updateFromRead(Read("tag_a", 34567, Antenna("Tube1", "Cage1")))
+        t.update_from_read(Read("tag_a", 23456, Antenna("Tube1", "ArenaA")))
+        fate = t.update_from_read(Read("tag_a", 34567, Antenna("Tube1", "Cage1")))
         self.assertEqual(fate, ReadFate.Move)
 
         self.assertEqual(
@@ -144,8 +144,8 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_one_missing(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 12345)
 
-        t.updateFromRead(Read("tag_a", 23456, Antenna("Tube1", "ArenaA")))
-        fate = t.updateFromRead(Read("tag_a", 34567, Antenna("Tube2", "Cage2")))
+        t.update_from_read(Read("tag_a", 23456, Antenna("Tube1", "ArenaA")))
+        fate = t.update_from_read(Read("tag_a", 34567, Antenna("Tube2", "Cage2")))
         self.assertEqual(fate, ReadFate.OneMissing)
 
         self.assertEqual(
@@ -161,9 +161,9 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_two_missing(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 12345)
 
-        t.updateFromRead(Read("tag_a", 23456, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 34567, Antenna("Tube1", "Cage1")))
-        fate = t.updateFromRead(Read("tag_a", 45678, Antenna("Tube3", "Cage3")))
+        t.update_from_read(Read("tag_a", 23456, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 34567, Antenna("Tube1", "Cage1")))
+        fate = t.update_from_read(Read("tag_a", 45678, Antenna("Tube3", "Cage3")))
         self.assertEqual(fate, ReadFate.TwoMissing)
 
         self.assertEqual(
@@ -180,16 +180,16 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_traversals(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 100)
 
-        t.updateFromRead(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(
+        t.update_from_read(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
+        t.update_from_read(
             Read("tag_a", 305, Antenna("Tube1", "Cage1"))
         )  # Short (< 10 sec)
-        t.updateFromRead(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 600, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(Read("tag_a", 700, Antenna("Tube1", "Cage1")))  # Long
-        t.updateFromRead(Read("tag_a", 800, Antenna("Tube2", "ArenaA")))  # OneMissing
-        t.updateFromRead(Read("tag_a", 900, Antenna("Tube2", "Cage2")))
+        t.update_from_read(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 600, Antenna("Tube1", "Cage1")))
+        t.update_from_read(Read("tag_a", 700, Antenna("Tube1", "Cage1")))  # Long
+        t.update_from_read(Read("tag_a", 800, Antenna("Tube2", "ArenaA")))  # OneMissing
+        t.update_from_read(Read("tag_a", 900, Antenna("Tube2", "Cage2")))
 
         self.assertEqual(
             list(t.traversals()),
@@ -213,13 +213,13 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_long_dwells(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 100)
 
-        t.updateFromRead(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(Read("tag_a", 30300, Antenna("Tube1", "Cage1")))  # Very Long
-        t.updateFromRead(
+        t.update_from_read(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
+        t.update_from_read(Read("tag_a", 30300, Antenna("Tube1", "Cage1")))  # Very Long
+        t.update_from_read(
             Read("tag_a", 90300.001, Antenna("Tube2", "ArenaA"))
         )  # OneMissing, very long in the arena, with extra 1 ms for missing read
-        t.updateFromRead(Read("tag_a", 100000, Antenna("Tube2", "Cage2")))
+        t.update_from_read(Read("tag_a", 100000, Antenna("Tube2", "Cage2")))
 
         # first confirm all dwells
         self.assertEqual(
@@ -247,16 +247,16 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_time_per_chamber_unrestricted(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 100)
 
-        t.updateFromRead(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(
+        t.update_from_read(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
+        t.update_from_read(
             Read("tag_a", 305, Antenna("Tube1", "Cage1"))
         )  # Short (< 10 sec)
-        t.updateFromRead(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 600, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(Read("tag_a", 700, Antenna("Tube1", "Cage1")))  # Long
-        t.updateFromRead(Read("tag_a", 800, Antenna("Tube2", "ArenaA")))  # OneMissing
-        t.updateFromRead(Read("tag_a", 900, Antenna("Tube2", "Cage2")))
+        t.update_from_read(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 600, Antenna("Tube1", "Cage1")))
+        t.update_from_read(Read("tag_a", 700, Antenna("Tube1", "Cage1")))  # Long
+        t.update_from_read(Read("tag_a", 800, Antenna("Tube2", "ArenaA")))  # OneMissing
+        t.update_from_read(Read("tag_a", 900, Antenna("Tube2", "Cage2")))
 
         # first confirm all dwells
         self.assertEqual(
@@ -285,16 +285,16 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_time_per_chamber_restricted(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 100)
 
-        t.updateFromRead(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(
+        t.update_from_read(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
+        t.update_from_read(
             Read("tag_a", 305, Antenna("Tube1", "Cage1"))
         )  # Short (< 10 sec)
-        t.updateFromRead(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 600, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(Read("tag_a", 700, Antenna("Tube1", "Cage1")))  # Long
-        t.updateFromRead(Read("tag_a", 800, Antenna("Tube2", "ArenaA")))  # OneMissing
-        t.updateFromRead(Read("tag_a", 900, Antenna("Tube2", "Cage2")))
+        t.update_from_read(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 600, Antenna("Tube1", "Cage1")))
+        t.update_from_read(Read("tag_a", 700, Antenna("Tube1", "Cage1")))  # Long
+        t.update_from_read(Read("tag_a", 800, Antenna("Tube2", "ArenaA")))  # OneMissing
+        t.update_from_read(Read("tag_a", 900, Antenna("Tube2", "Cage2")))
 
         # first confirm all dwells
         self.assertEqual(
@@ -322,17 +322,17 @@ class TestAnimalTrajectory(unittest.TestCase):
     def test_get_locations_between(self):
         t = _AnimalTrajectory("tag_a", "ArenaA", 100)
 
-        t.updateFromRead(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
-        t.updateFromRead(
+        t.update_from_read(Read("tag_a", 200, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 300, Antenna("Tube1", "Cage1")))
+        t.update_from_read(
             Read("tag_a", 305, Antenna("Tube1", "Cage1"))
         )  # Short (< 10 sec)
-        t.updateFromRead(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 600, Antenna("Tube2", "ArenaA")))
-        t.updateFromRead(Read("tag_a", 700, Antenna("Tube2", "Cage2")))  
-        t.updateFromRead(Read("tag_a", 800, Antenna("Tube2", "Cage2")))  # Long
-        t.updateFromRead(Read("tag_a", 900, Antenna("Tube2", "ArenaA")))  # OneMissing
-        t.updateFromRead(Read("tag_a", 1000, Antenna("Tube3", "ArenaA")))
+        t.update_from_read(Read("tag_a", 500, Antenna("Tube1", "ArenaA")))
+        t.update_from_read(Read("tag_a", 600, Antenna("Tube2", "ArenaA")))
+        t.update_from_read(Read("tag_a", 700, Antenna("Tube2", "Cage2")))  
+        t.update_from_read(Read("tag_a", 800, Antenna("Tube2", "Cage2")))  # Long
+        t.update_from_read(Read("tag_a", 900, Antenna("Tube2", "ArenaA")))  # OneMissing
+        t.update_from_read(Read("tag_a", 1000, Antenna("Tube3", "ArenaA")))
 
         self.assertEqual(t.get_locations_between(0, 1100), ["ArenaA", "Tube1", "ArenaA", "Tube2", "Cage2", "Tube2", "ArenaA"])
         self.assertEqual(t.get_locations_between(150, 750), ["ArenaA", "Tube1", "ArenaA", "Tube2", "Cage2"])

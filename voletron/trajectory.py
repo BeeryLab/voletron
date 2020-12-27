@@ -26,14 +26,14 @@ for the next phase.
 """
 
 
-def shortDwellChamber(antenna):
+def short_dwell_chamber(antenna):
     """Heuristic for which chamber an animal was likely in, given two
     consecutive reads at the same antenna with a brief time interval.
     """
     return antenna.tube
 
 
-def longDwellChamber(antenna):
+def long_dwell_chamber(antenna):
     """Heuristic for which chamber an animal was likely in, given two
     consecutive reads at the same antenna with a long time interval.
     """
@@ -47,7 +47,7 @@ class TwoMissingReadsException(Exception):
         self.readB = readB
 
 
-def inferMissingRead(readA, readB):
+def infer_missing_read(readA, readB):
     """Given two non-adjacent Reads, infer a single Read between them.
 
     Only a single Read can be inferred by this method.  If two consecutive Reads
@@ -110,7 +110,7 @@ class _AnimalTrajectory:
         ]  # The animal was outside the apparatus before the experiment
         self.priorRead = Read(tag_id, start_time, Antenna(None, initial_chamber))
 
-    def _appendDwell(self, start, end, chamber):
+    def _append_dwell(self, start, end, chamber):
         """
         Records that the animal was in a chamber during a time interval.
 
@@ -135,7 +135,7 @@ class _AnimalTrajectory:
                 start = lastDwell.start
         self.dwells.append(Dwell(start, end, chamber))
 
-    def updateFromRead(self, read) -> ReadFate:
+    def update_from_read(self, read) -> ReadFate:
         """
         Extends the tracked Trajectory based on a new Read.
 
@@ -182,10 +182,10 @@ class _AnimalTrajectory:
 
             # TODO: make the dwell time threshold configurable.
             if seconds_between_reads >= 10:
-                dwellChamber = longDwellChamber(read.antenna)
+                dwellChamber = long_dwell_chamber(read.antenna)
                 fate = ReadFate.Long_Cage
             else:
-                dwellChamber = shortDwellChamber(read.antenna)
+                dwellChamber = short_dwell_chamber(read.antenna)
                 fate = ReadFate.Short_Tube
         else:
             dwellChamber = chamberBetween(self.priorRead.antenna, read.antenna)
@@ -193,10 +193,10 @@ class _AnimalTrajectory:
                 fate = ReadFate.Move
             else:  # At least one missing read
                 try:
-                    missingRead = inferMissingRead(self.priorRead, read)
-                    a = self.updateFromRead(missingRead)
+                    missingRead = infer_missing_read(self.priorRead, read)
+                    a = self.update_from_read(missingRead)
                     assert a == ReadFate.Move
-                    # b = self.updateFromRead(read)
+                    # b = self.update_from_read(read)
                     # assert b == ReadFate.Move
                     dwellChamber = chamberBetween(missingRead.antenna, read.antenna)
                     fate = ReadFate.OneMissing
@@ -211,7 +211,7 @@ class _AnimalTrajectory:
                     dwellChamber = "ERROR"
                     fate = ReadFate.TwoMissing
 
-        self._appendDwell(self.priorRead.timestamp, read.timestamp, dwellChamber)
+        self._append_dwell(self.priorRead.timestamp, read.timestamp, dwellChamber)
         self.priorRead = read
         return fate
 
@@ -272,11 +272,11 @@ class AllAnimalTrajectories:
         for [tag_id, reads] in reads_per_animal.items():
             animalTrajectory = self.animalTrajectories[tag_id]
             for read in reads:
-                fate = animalTrajectory.updateFromRead(read)
+                fate = animalTrajectory.update_from_read(read)
                 fate_counts[fate] += 1
                 last_read = read
             end_read = Read(last_read.tag_id, end_time, last_read.antenna)
-            fate = animalTrajectory.updateFromRead(end_read)
+            fate = animalTrajectory.update_from_read(end_read)
             fate_counts[fate] += 1
         count = sum(fate_counts.values())
         fate_percent = {

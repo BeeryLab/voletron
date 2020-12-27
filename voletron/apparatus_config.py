@@ -53,20 +53,3 @@ all_chambers = sorted(
     list(set([item for a in all_antennae for item in [a.tube, a.cage]]))
 )
 all_chambers.append("ERROR")
-
-# Maps Tag IDs to the initial chamber for each animal.
-# InitialChambers = {
-#     "972273000583241": "ArenaA",
-#     "972273000591811": "ArenaA",
-#     "972273000585334": "ArenaA",
-#     "972273000584934": "ArenaA",
-#     "972273000591336": "ArenaB",
-#     "972273000592118": "ArenaB",
-#     "972273000583609": "ArenaB",
-#     "972273000584356": "ArenaB",
-#     "972273000585057": "ArenaB",
-#     # "97227300058356" : "ArenaB",  # Tag broken, exclude (??)
-#     "972273000588368": "ArenaB",
-#     "972273000583889": "ArenaB",
-#     "972273000585644": "ArenaB",
-# }

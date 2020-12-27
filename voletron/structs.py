@@ -7,11 +7,10 @@ Antenna = NamedTuple("Antenna", [("tube", str), ("cage", str)])
 # One observation of a tag by an antenna.
 Read = NamedTuple("Read", [("tag_id", str), ("timestamp", int), ("antenna", Antenna)])
 
-
+# One validation event, when an animal was observed by a human to be in a certain chamber.
 Validation = NamedTuple(
     "Validation", [("timestamp", int), ("tag_id", str), ("chamber", str)]
 )
-
 
 # One timespan of presence of an animal in a given chamber.  The animal ID is
 # not given, because these records are used only within an AnimalTrajectory.

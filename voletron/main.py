@@ -86,6 +86,14 @@ def main(argv):
     else:
         analysis_end_time = last_read_time
 
+    print("\nIntervals:")
+    print("-----------------------------")
+    print("Experiment Start (first read): {}".format(format_time(first_read_time)))
+    print("               Analysis Start: {}".format(format_time(analysis_start_time)))
+    print("                 Analysis End: {}".format(format_time(analysis_end_time)))
+    print("   Experiment End (last read): {}".format(format_time(last_read_time)))
+
+
     # Infer animal trajectories from antenna reads
     trajectories = AllAnimalTrajectories(
         first_read_time, config.tag_id_to_start_chamber, reads_per_animal

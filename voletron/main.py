@@ -5,7 +5,13 @@ import os
 import sys
 
 from voletron.apparatus_config import apparatus_chambers
-from voletron.output import writeChamberTimes, writeCohabs, writeLongDwells
+from voletron.output import (
+    writeChamberTimes,
+    writeCohabs,
+    writeGroupCohabs,
+    writeGroupSizes,
+    writeLongDwells,
+)
 from voletron.parse_config import parse_config, parse_validation
 from voletron.parse_olcus import parse_first_read, parse_raw_dir
 from voletron.preprocess_reads import preprocess_reads
@@ -167,6 +173,25 @@ def main(argv):
             state,
             analysis_start_time,
             analysis_end_time,
+        )
+        writeGroupCohabs(
+            config,
+            tag_ids,
+            out_dir,
+            exp_name,
+            state,
+            analysis_start_time,
+            analysis_end_time,
+            config.tag_id_to_name,
+        )
+        writeGroupSizes(
+            tag_ids,
+            out_dir,
+            exp_name,
+            state,
+            analysis_start_time,
+            analysis_end_time,
+            config.tag_id_to_name,
         )
         writeLongDwells(config, tag_ids, out_dir, exp_name, trajectories)
 

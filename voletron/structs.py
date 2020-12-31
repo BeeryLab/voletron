@@ -18,7 +18,7 @@ Validation = NamedTuple(
 # cage where the animal stayed during this time.
 Dwell = NamedTuple("Dwell", [("start", int), ("end", int), ("chamber", str)])
 
-# Structurally the same as a Dwell, but describes pairs of animals
+# Structurally the same as a Dwell, but describes pairs or groups of animals
 CoDwell = NamedTuple("CoDwell", [("start", int), ("end", int), ("chamber", str)])
 
 # One instance of an animal crossing from one chamber (tube or cage) to another.
@@ -45,6 +45,10 @@ CoDwellAggregate = NamedTuple(
     [("animal_a", str), ("animal_b", str), ("count", int), ("duration", float)],
 )
 
+GroupDwellAggregate = NamedTuple(
+    "GroupDwellAggregate",
+    [("group", str), ("count", int), ("duration", float)],
+)
 
 def chamberBetween(antennaA, antennaB):
     """Determine which chamber is between two Antennae."""

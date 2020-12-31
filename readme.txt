@@ -1,9 +1,5 @@
 ----Sooner----
 
-TODO: AB request: Separate output files by apparatus. Config file now has a 4th column "Data Set" with an ID for the run.
-
-TODO: AB request: Assume config file is in the folder with the raw data. Will have _Config.csv in name.
-
 TODO: Add log file, recording time interval and stdout
 
 TODO: AB request output a total contact time file with (easy version): vole ID, sum of time it spent in contact with any non-self vole, Test duration analyzed, contact time/test duration

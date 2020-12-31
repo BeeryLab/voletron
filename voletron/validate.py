@@ -4,16 +4,11 @@ from voletron.parse_config import parse_validation
 from voletron.util import format_time
 
 
-def validate(out_dir, exp_name, trajectories, filename, tag_id_to_name):
+def validate(tag_ids, out_dir, exp_name, trajectories, tag_id_to_name, validations):
     print("\nValidation:")
     print("-----------------------------")
-    if not filename:
-        print("No validation file provided")
-        return
 
-    validations = parse_validation(
-        filename, {v: k for (k, v) in tag_id_to_name.items()}
-    )
+    validations = [vv for vv in validations if vv.tag_id in tag_ids]
 
     with open(os.path.join(out_dir, exp_name + ".validate.csv"), "w") as f:
         f.write("Correct,Timestamp,AnimalID,Expected,Observed\n")

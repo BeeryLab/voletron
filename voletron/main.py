@@ -1,9 +1,10 @@
 import argparse
 import datetime
+import glob
 import os
 import sys
 
-from voletron.apparatus_config import all_chambers
+from voletron.apparatus_config import apparatus_chambers
 from voletron.output import writeChamberTimes, writeCohabs, writeLongDwells
 from voletron.parse_config import parse_config, parse_validation
 from voletron.parse_olcus import parse_first_read, parse_raw_dir
@@ -20,14 +21,11 @@ def main(argv):
     co-hab duration for each pair of animals."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "config",
-        help="Configuration file for the run.  "
-        "CSV with lines of the form `animal_name, tag_id, initial_chamber`.",
-    )
-    parser.add_argument(
         "olcusDir",
         help="A directory containing Olcus output files.  "
-        "Any file in this directory called `raw*.csv` will be processed.",
+        "Any file in this directory called `raw*.csv` will be processed.  "
+        "The directory must contain exactly one file called `*_Config.csv`, "
+        "comprised of lines of the form `animal_name, tag_id, initial_chamber`.",
     )
     parser.add_argument(
         "--start",
@@ -48,12 +46,28 @@ def main(argv):
     )
     parser.add_argument(
         "--validation",
+        action=argparse.BooleanOptionalAction,
         help="Manual validation data for the run.  "
-        "CSV with lines of the form `timestamp, animal_name, chamber`.",
+        "Looks in the data directory for a file called `*_Validation.csv`, "
+        "comprised of lines of the form `timestamp, animal_name, chamber`.",
     )
     args = parser.parse_args()
 
-    config = parse_config(args.config)
+    configFiles = glob.glob(os.path.join(args.olcusDir, "*_[Cc]onfig.csv"))
+    if len(configFiles) != 1:
+        raise ValueError("Could not find exactly one `*_Config.csv` file.")
+
+    config = parse_config(configFiles[0])
+
+    if args.validation:
+        validationFiles = glob.glob(os.path.join(args.olcusDir, "*_[Vv]alidation.csv"))
+        if len(configFiles) != 1:
+            raise ValueError("Could not find exactly one `*_Validation.csv` file.")
+
+        validations = parse_validation(
+            validationFiles[0], {v: k for (k, v) in config.tag_id_to_name.items()}
+        )
+
     olcusDir = os.path.normpath(args.olcusDir)
 
     print("\n===================================")
@@ -76,7 +90,9 @@ def main(argv):
     else:
         analysis_start_time = first_read_time
 
-    reads_per_animal = preprocess_reads(reads, config.tag_id_to_start_chamber.keys(), config.tag_id_to_name)
+    reads_per_animal = preprocess_reads(
+        reads, config.tag_id_to_start_chamber.keys(), config.tag_id_to_name
+    )
 
     last_read_time = max([vv[-1].timestamp for vv in reads_per_animal.values()])
     if args.end != None:
@@ -92,7 +108,6 @@ def main(argv):
     print("               Analysis Start: {}".format(format_time(analysis_start_time)))
     print("                 Analysis End: {}".format(format_time(analysis_end_time)))
     print("   Experiment End (last read): {}".format(format_time(last_read_time)))
-
 
     # Infer animal trajectories from antenna reads
     trajectories = AllAnimalTrajectories(
@@ -110,20 +125,50 @@ def main(argv):
     # Output
 
     exp_name = os.path.basename(olcusDir)
-    out_dir = os.path.join(olcusDir, "voletron")
-    os.makedirs(out_dir)
 
-    # Validation
-    validate(out_dir, exp_name, trajectories, args.validation, config.tag_id_to_name)
+    for (desired_start_chamber, chambers) in apparatus_chambers.items():
 
-    writeChamberTimes(
-        config, out_dir, exp_name, trajectories, analysis_start_time, analysis_end_time
-    )
-    writeCohabs(
-        config, out_dir, exp_name, state, analysis_start_time, analysis_end_time
-    )
-    writeLongDwells(config, out_dir, exp_name, trajectories)
+        # Filter animals by apparatus
+        tag_ids = [
+            tag_id
+            for (tag_id, start_chamber) in config.tag_id_to_start_chamber.items()
+            if start_chamber == desired_start_chamber
+        ]
 
+        out_dir = os.path.join(olcusDir, "voletron_" + desired_start_chamber)
+        os.makedirs(out_dir)
+
+        if args.validation:
+            # Validation
+            validate(
+                tag_ids,
+                out_dir,
+                exp_name,
+                trajectories,
+                config.tag_id_to_name,
+                validations,
+            )
+
+        writeChamberTimes(
+            config,
+            tag_ids,
+            chambers,
+            out_dir,
+            exp_name,
+            trajectories,
+            analysis_start_time,
+            analysis_end_time,
+        )
+        writeCohabs(
+            config,
+            tag_ids,
+            out_dir,
+            exp_name,
+            state,
+            analysis_start_time,
+            analysis_end_time,
+        )
+        writeLongDwells(config, tag_ids, out_dir, exp_name, trajectories)
 
 
 main(sys.argv)

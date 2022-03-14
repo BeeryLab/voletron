@@ -8,7 +8,8 @@ from voletron.structs import Antenna, CoDwellAggregate, CoDwell, Dwell, Read, Tr
 
 class TestChamber(unittest.TestCase):
     def test_arrive(self):
-        c = Chamber(None)  # arrive doesn't use record_co_dwell
+        record_group_dwell = MagicMock()
+        c = Chamber(None, record_group_dwell)  # arrive doesn't use record_co_dwell
         self.assertIsNone(c.last_event)
         self.assertEqual(dict(c.animals_since), {})
         c.arrive(100, "tag_a")
@@ -17,7 +18,8 @@ class TestChamber(unittest.TestCase):
 
     def test_arrive_depart(self):
         record_co_dwell = MagicMock()
-        c = Chamber(record_co_dwell)
+        record_group_dwell = MagicMock()
+        c = Chamber(record_co_dwell, record_group_dwell)
         c.arrive(100, "tag_a")
         c.depart(200, "tag_a")
         c.arrive(300, "tag_b")
@@ -27,13 +29,15 @@ class TestChamber(unittest.TestCase):
 
     def test_depart_before_arrive(self):
         record_co_dwell = MagicMock()
-        c = Chamber(record_co_dwell)
+        record_group_dwell = MagicMock()
+        c = Chamber(record_co_dwell, record_group_dwell)
         with self.assertRaises(ValueError):
             c.depart(100, "tag_a")
 
     def test_co_dwell(self):
         record_co_dwell = MagicMock()
-        c = Chamber(record_co_dwell)
+        record_group_dwell = MagicMock()
+        c = Chamber(record_co_dwell, record_group_dwell)
         c.arrive(100, "tag_a")
         c.arrive(200, "tag_b")
         c.depart(300, "tag_a")

@@ -100,6 +100,15 @@ def main(argv):
         reads, config.tag_id_to_start_chamber.keys(), config.tag_id_to_name
     )
 
+    unobserved_animals = [kk for (kk, vv) in reads_per_animal.items() if len(vv) == 0]
+    if unobserved_animals:
+
+
+        print("\n\n-----------------------------")
+        print("WARNING: Animals in config but not observed:")
+        print(unobserved_animals)
+        print("----------------------------\n\n")
+
     last_read_time = max([vv[-1].timestamp for vv in reads_per_animal.values()])
     if args.end != None:
         analysis_end_time = datetime.datetime.strptime(

@@ -66,9 +66,9 @@ def parse_first_read(dirname):
     files = sorted(glob.glob(os.path.join(dirname, "raw*.csv")))
     with open(files[0]) as file:
         file.readline()  # skip headers
-        line = file.readline()
         read = None
         while not read:
+            line = file.readline()
             read = parse_raw_line(line)
     return read
 

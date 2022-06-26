@@ -91,7 +91,7 @@ def main(argv):
     olcusDir = os.path.normpath(args.olcusDir)
 
     print("\n===================================")
-    print("VoleTron v0.1, 2020-12-27")
+    print("Voletron v0.1, 2020-12-27")
     print("http://github.com/beerylab/voletron")
     print("===================================")
     print("")

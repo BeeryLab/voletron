@@ -17,6 +17,7 @@ import datetime
 import glob
 import os
 import sys
+from typing import Generator
 
 from voletron.apparatus_config import olcus_id_to_antenna_hardcode
 from voletron.structs import Antenna, Config, Read
@@ -51,7 +52,7 @@ def parse_raw_line(line) -> Read:
     return Read(tag_id, dt.timestamp(), antenna)
 
 
-def parse_raw_file(filename):
+def parse_raw_file(filename) -> Generator[Read, None, None]:
     """Parse a raw input file, producing a stream of Read objects.
 
     Args:
@@ -69,7 +70,7 @@ def parse_raw_file(filename):
                 yield read
 
 
-def parse_first_read(dirname):
+def parse_first_read(dirname) -> Read:
     """Obtain the first read from the first raw file in a directory.
     Args:
         dirname: The directory name from which to read.
@@ -88,7 +89,7 @@ def parse_first_read(dirname):
     return read
 
 
-def parse_raw_dir(dirname):
+def parse_raw_dir(dirname) -> Generator[Read, None, None]:
     """Parse raw files in a directory in order, producing a stream of Reads.
 
     Args:

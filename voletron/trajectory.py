@@ -17,9 +17,10 @@ import datetime
 import sys
 from collections import defaultdict, namedtuple
 from enum import Enum
+from typing import Dict, Generator, List
 
 from voletron.apparatus_config import all_antennae
-from voletron.structs import Antenna, Dwell, Read, Traversal, chamberBetween
+from voletron.structs import Antenna, Dwell, LongDwell, Read, Traversal, chamberBetween
 from voletron.util import seconds_between_timestamps
 
 """Converts a series of antenna Reads into a series of Traversals, describing
@@ -230,7 +231,7 @@ class _AnimalTrajectory:
         self.priorRead = read
         return fate
 
-    def traversals(self):
+    def traversals(self) -> Generator[Traversal, None, None]:
         """
         Represent the animal's Trajectory as a series of Traversals
         describing when the animal moved from one Chamber into another.
@@ -246,13 +247,13 @@ class _AnimalTrajectory:
                     d.start, self.tag_id, self.dwells[i - 1].chamber, d.chamber
                 )
 
-    def long_dwells(self):
+    def long_dwells(self) -> Generator[LongDwell, None, None]:
         for d in self.dwells:
             dwell_time = d.end - d.start
             if dwell_time > 60 * 60 * 4:  # 6 hours
-                yield [self.tag_id, d.chamber, d.start, dwell_time / 60]
+                yield LongDwell(self.tag_id, d.chamber, d.start, dwell_time / 60)
 
-    def time_per_chamber(self, analysis_start_time, analysis_end_time):
+    def time_per_chamber(self, analysis_start_time, analysis_end_time) -> Dict[str, int]:
         chamber_times = defaultdict(lambda: 0)
         for d in self.dwells:
             start = max(d.start, analysis_start_time)
@@ -261,7 +262,7 @@ class _AnimalTrajectory:
                 chamber_times[d.chamber] += end - start
         return chamber_times
 
-    def get_locations_between(self, analysis_start_time, analysis_end_time):
+    def get_locations_between(self, analysis_start_time, analysis_end_time) -> List[str]:
         chambers = []
         for d in self.dwells:
             start = max(d.start, analysis_start_time)
@@ -277,7 +278,7 @@ class AllAnimalTrajectories:
     a sequence of antenna reads.
     """
 
-    def __init__(self, start_time, tag_id_to_start_chamber, reads_per_animal):
+    def __init__(self, start_time, tag_id_to_start_chamber: Dict[str, str], reads_per_animal):
         self.animalTrajectories = {
             tag_id: _AnimalTrajectory(tag_id, initialChamber, start_time)
             for [tag_id, initialChamber] in tag_id_to_start_chamber.items()
@@ -303,7 +304,7 @@ class AllAnimalTrajectories:
         for [key, value] in fate_percent.items():
             print("{:>10}: {}".format(key, value))
 
-    def traversals(self):
+    def traversals(self) -> Generator[Traversal, None, None]:
         """
         Provides all Traversals of all animals through the apparatus, in
         chronological order.  This differs from the sequence of Reads in that
@@ -332,5 +333,5 @@ class AllAnimalTrajectories:
                 del peeks[next_tag_id]
             yield result
 
-    def get_locations_between(self, tag_id, start, end):
+    def get_locations_between(self, tag_id, start, end) -> List[str]:
         return self.animalTrajectories[tag_id].get_locations_between(start, end)

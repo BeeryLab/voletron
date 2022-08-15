@@ -9,6 +9,7 @@ voletron.egg-info
 raw
 raw_cohort_1
 raw_orig
+test-*
 
 ## General temp files
 

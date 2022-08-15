@@ -13,22 +13,27 @@
 # limitations under the License.
 
 
+from typing import Dict, Iterable, List
 from voletron.structs import Read, chamberBetween
 
 
-def preprocess_reads(reads, tag_ids, tag_id_to_name):
+def preprocess_reads(
+    reads: Iterable[Read], tag_ids: Iterable[int], tag_id_to_name: Dict[int, str]
+) -> Dict[int, List[Read]]:
     reads_per_animal = split_reads_per_animal(reads, tag_ids)
 
     print("\nPreprocessing:")
     print("-----------------------------")
     for [tag_id, animal_reads] in reads_per_animal.items():
         # mutating
-        spaced_reads(animal_reads)
-        parsimonious_reads(tag_id, animal_reads, tag_id_to_name)
+        _spaced_reads(animal_reads)
+        _parsimonious_reads(tag_id, animal_reads, tag_id_to_name)
     return reads_per_animal
 
 
-def split_reads_per_animal(reads, tag_ids):
+def split_reads_per_animal(
+    reads: Iterable[Read], tag_ids: Iterable[int]
+) -> Dict[int, List[Read]]:
     result = {tag_id: [] for tag_id in tag_ids}
     for read in reads:
         try:
@@ -38,7 +43,11 @@ def split_reads_per_animal(reads, tag_ids):
     return result
 
 
-def spaced_reads(reads):
+def _spaced_reads(reads: Iterable[Read]) -> None:
+    """Space out nearly-simultaneous reads slightly in time.
+
+    Mutates the provided `reads`.
+    """
     # Two exactly simultaneous reads are not impossible, because the sensors
     # are slow and effectively add noise in time.
     # To deal with this, we simply add 2 ms to the second read.
@@ -61,13 +70,19 @@ def spaced_reads(reads):
                 print("Jitter > 3 msec!")
 
 
-def parsimonious_reads(tag_id, reads, tag_id_to_name):
+def _parsimonious_reads(
+    tag_id: int, reads: Iterable[Read], tag_id_to_name: Dict[int, str]
+) -> None:
+    """Swap the order of nearly-simultaneous reads when it makes sense.
+
+    Mutates the provided `reads`.
+    """
     count = 0
     for i in range(0, len(reads) - 4):
         [a, b, c, d] = reads[i : i + 4]
         if abs(c.timestamp - b.timestamp) < 0.010:
             # Middle two reads are close enough to consider swapping them, if parsimonious.
-            # Each of this values is True if the read pair is parsimonious, false otherwise
+            # Each of these values is True if the read pair is parsimonious, false otherwise
             ab = a.antenna == b.antenna or (
                 chamberBetween(a.antenna, b.antenna) != None
             )

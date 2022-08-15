@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import MagicMock, call
 
 from voletron.parse_olcus import parse_raw_line
-from voletron.preprocess_reads import parsimonious_reads, spaced_reads
+from voletron.preprocess_reads import _parsimonious_reads, _spaced_reads
 from voletron.state import Chamber, State
 from voletron.structs import Antenna, Dwell, Read, Traversal
 
@@ -33,7 +33,7 @@ class TestPreprocessReads(unittest.TestCase):
             Read("tag_a", 300.001, Antenna("Tube4", "Cage4")),
         ]
         # mutating
-        spaced_reads(reads)
+        _spaced_reads(reads)
 
         self.assertEqual(
             reads,
@@ -61,7 +61,7 @@ class TestPreprocessReads(unittest.TestCase):
         tag_id_to_name = {"tag_a": "Animal A"}
 
         # mutating
-        parsimonious_reads("tag_a", reads, tag_id_to_name)
+        _parsimonious_reads("tag_a", reads, tag_id_to_name)
 
         self.assertEqual(
             reads,

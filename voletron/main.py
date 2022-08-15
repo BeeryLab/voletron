@@ -32,7 +32,7 @@ from voletron.preprocess_reads import preprocess_reads
 from voletron.state import State
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
-from voletron.validate import validate
+from voletron.validate import write_validation
 
 
 def main(argv):

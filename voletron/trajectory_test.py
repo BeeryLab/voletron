@@ -16,7 +16,7 @@
 import unittest
 
 from voletron.parse_olcus import parse_raw_line
-from voletron.structs import Antenna, Dwell, Read, Traversal
+from voletron.structs import Antenna, Dwell, LongDwell, Read, Traversal
 from voletron.trajectory import (
     AllAnimalTrajectories,
     ReadFate,
@@ -254,8 +254,8 @@ class TestAnimalTrajectory(unittest.TestCase):
         self.assertEqual(
             list(t.long_dwells()),
             [
-                ["tag_a", "Cage1", 300, 500.0],  # 500 sec in cage 1
-                ["tag_a", "ArenaA", 30300.001, 1000],  # 1000 sec in the arena
+                LongDwell("tag_a", "Cage1", 300, 500.0),  # 500 sec in cage 1
+                LongDwell("tag_a", "ArenaA", 30300.001, 1000),  # 1000 sec in the arena
             ],
         )
 

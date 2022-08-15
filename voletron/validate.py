@@ -19,7 +19,7 @@ from voletron.parse_config import parse_validation
 from voletron.util import format_time
 
 
-def validate(tag_ids, out_dir, exp_name, trajectories, tag_id_to_name, validations):
+def write_validation(tag_ids, out_dir, exp_name, trajectories, tag_id_to_name, validations) -> None:
     print("\nValidation:")
     print("-----------------------------")
 

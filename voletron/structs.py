@@ -33,8 +33,12 @@ Validation = NamedTuple(
 # cage where the animal stayed during this time.
 Dwell = NamedTuple("Dwell", [("start", int), ("end", int), ("chamber", str)])
 
-# Structurally the same as a Dwell, but describes pairs or groups of animals
-CoDwell = NamedTuple("CoDwell", [("start", int), ("end", int), ("chamber", str)])
+# An instance of an animal staying put for a very long time, which likely
+# indicates an error of some kind
+LongDwell = NamedTuple(
+    "LongDwell",
+    [("tag_id", int), ("chamber", str), ("start_time", int), ("minutes", int)],
+)
 
 # One instance of an animal crossing from one chamber (tube or cage) to another.
 # This extends the idea of a `Read`, because here the direction of travel is

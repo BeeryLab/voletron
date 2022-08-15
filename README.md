@@ -83,9 +83,9 @@ found.
   quad, etc.
 - `*.group_size.csv`: average group sizes each tag was found in, and average
   group sizes when in a group (excluding solo time).
-- `*.longdwells.csv`: any time a vole was present in a location for > ??. In
-  most well-functioning tests this should not have data, so indicates a removed
-  or lost RFID tag.
+- `*.longdwells.csv`: any time a vole was present in a location for more than 6
+  hours. In most well-functioning tests this should not occur, so it indicates a
+  removed or lost RFID tag.
 
 ## Inference logic
 

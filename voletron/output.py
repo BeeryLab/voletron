@@ -97,6 +97,25 @@ def writeChamberTimes(
             )
 
 
+def write_activity(
+    out_dir,
+    exp_name,
+    trajectories: AllAnimalTrajectories,
+    analysis_start_time,
+    analysis_end_time,
+    bin_secs,
+):
+    with open(os.path.join(out_dir, exp_name + ".activity.csv"), "w") as f:
+        for [tag_id, traj] in trajectories.animalTrajectories.items():
+            start = analysis_start_time
+            end = start + bin_secs
+            while start < analysis_end_time:
+                # inefficient but so what
+                count = traj.count_traversals_between(start, end)
+                f.write(f"{tag_id},{start},{end},{bin_secs},{count}")
+                start += bin_secs
+                end += bin_secs
+
 def writeGroupSizes(
     tag_ids,
     out_dir,

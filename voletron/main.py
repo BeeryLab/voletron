@@ -20,6 +20,7 @@ import sys
 
 from voletron.apparatus_config import apparatus_chambers
 from voletron.output import (
+    write_activity,
     writeChamberTimes,
     writeCohabs,
     writeGroupCohabs,
@@ -70,6 +71,10 @@ def main(argv):
         help="Manual validation data for the run.  "
         "Looks in the data directory for a file called `*_Validation.csv`, "
         "comprised of lines of the form `timestamp, animal_name, chamber`.",
+    )
+    parser.add_argument(
+        "bin_seconds",
+        help="Bin size, in seconds, for time-series outputs.",
     )
     args = parser.parse_args()
 
@@ -219,4 +224,12 @@ def main(argv):
         writeLongDwells(config, tag_ids, out_dir, exp_name, trajectories)
 
 
+        write_activity(
+            out_dir,
+            exp_name,
+            trajectories,
+            analysis_start_time,
+            analysis_end_time,
+            args.bin_seconds,
+        )
 main(sys.argv)

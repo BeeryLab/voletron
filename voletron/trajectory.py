@@ -271,6 +271,15 @@ class _AnimalTrajectory:
                 chambers.append(d.chamber)
         return chambers
 
+    def count_traversals_between(self, analysis_start_time, analysis_end_time) -> int:
+        count = 0
+        for d in self.dwells:
+            start = max(d.start, analysis_start_time)
+            end = min(d.end, analysis_end_time)
+            if end > start:
+                count += 1
+        return count
+
 
 class AllAnimalTrajectories:
     """

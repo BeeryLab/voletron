@@ -58,9 +58,36 @@ olcus_id_to_antenna_hardcode = {
     },  # device 3
 }
 
+# This could be derived from the above, but I'm lazy
 apparatus_chambers = {
-    "ArenaA": ["ArenaA", "Cage1", "Cage2", "Cage3", "Cage4", "Cage5", "ERROR"],
-    "ArenaB": ["ArenaB", "Cage6", "Cage7", "Cage8", "Cage9", "Cage10", "ERROR"],
+    "ArenaA": [
+        "ArenaA",
+        "Cage1",
+        "Tube1",
+        "Cage2",
+        "Tube2",
+        "Cage3",
+        "Tube3",
+        "Cage4",
+        "Tube4",
+        "Cage5",
+        "Tube5",
+        "ERROR",
+    ],
+    "ArenaB": [
+        "ArenaB",
+        "Cage6",
+        "Tube6",
+        "Cage7",
+        "Tube7",
+        "Cage8",
+        "Tube8",
+        "Cage9",
+        "Tube9",
+        "Cage10",
+        "Tube10",
+        "ERROR",
+    ],
 }
 
 all_antennae = [
@@ -73,4 +100,3 @@ all_chambers = sorted(
     list(set([item for a in all_antennae for item in [a.tube, a.cage]]))
 )
 all_chambers.append("ERROR")
-

@@ -14,6 +14,7 @@
 
 
 import unittest
+import pytz
 
 from voletron.parse_olcus import parse_raw_line
 from voletron.structs import Read
@@ -22,7 +23,8 @@ from voletron.structs import Read
 class TestParse(unittest.TestCase):
     def test_parse_raw_line(self):
         line = "3168630996;05.03.2020 16:14:11:796;0;0;972273000584934"
-        read = parse_raw_line(line)
+        timezone = pytz.timezone("US/Pacific")
+        read = parse_raw_line(line, timezone)
         self.assertEqual(read.tag_id, "972273000584934")
 
         # This test hardcodes being in the US PST timezone
@@ -34,7 +36,8 @@ class TestParse(unittest.TestCase):
 
     def test_parse_raw_line_empty_tag(self):
         line = "3169159459;05.03.2020 16:14:12:312;0;0;"
-        read = parse_raw_line(line)
+        timezone = pytz.timezone("US/Pacific")
+        read = parse_raw_line(line, timezone)
         self.assertEqual(read, None)
 
 

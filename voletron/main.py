@@ -13,33 +13,36 @@
 # limitations under the License.
 
 import argparse
+from cmath import exp
 import datetime
 import glob
 import os
 import sys
+import pytz
 
-from voletron.apparatus_config import apparatus_chambers
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from voletron.apparatus_config import apparatus_chambers, all_chambers
 from voletron.output import (
     write_activity,
-    writeChamberTimes,
-    writeCohabs,
-    writeGroupCohabs,
-    writeGroupSizes,
-    writeLongDwells,
+    write_chamber_times,
+    write_pair_inclusive_cohabs,
+    write_group_chamber_cohabs,
+    write_group_sizes,
+    write_long_dwells,
 )
 from voletron.parse_config import parse_config, parse_validation
 from voletron.parse_olcus import parse_first_read, parse_raw_dir
 from voletron.preprocess_reads import preprocess_reads
-from voletron.state import State
+from voletron.co_dwell_accumulator import CoDwellAccumulator, TimeSpanAnalyzer
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
 from voletron.validate import write_validation
+from voletron.structs import Config, Validation
+from voletron.time_span_analyzer import TimeSpanAnalyzer
 
 
-def main(argv):
-    """Analyze a 'raw' file describing Olcus antenna data from a Beery Lab
-    vole group-living RFID apparatus.  Infers co-habitation bouts and total
-    co-hab duration for each pair of animals."""
+def _parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "olcusDir",
@@ -73,11 +76,25 @@ def main(argv):
         "comprised of lines of the form `timestamp, animal_name, chamber`.",
     )
     parser.add_argument(
-        "bin_seconds",
+        "--bin_seconds",
+        type=int,
         help="Bin size, in seconds, for time-series outputs.",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "timezone",
+        default="US/Pacific",
+        help="Olcus logs timestamps in the local timezone, but does not record "
+        "which timezone that is.  Thus, we allow specifying the timezone in "
+        "which the Olcus logs should be interpreted.  This makes no difference "
+        "to the current analyses, which are all just about durations anyway, "
+        "not about absolute time.  Defaults to 'US/Pacific'.  Other options "
+        "are listed at "
+        "https://en.wikipedia.org/wiki/List_of_tz_database_time_zones."
+        )
+    return parser.parse_args()
 
+
+def _parse_config(args) -> tuple[Config, list[Validation], str]:
     configFiles = glob.glob(os.path.join(args.olcusDir, "*_[Cc]onfig.csv"))
     if len(configFiles) != 1:
         raise ValueError("Could not find exactly one `*_Config.csv` file.")
@@ -95,25 +112,46 @@ def main(argv):
 
     olcusDir = os.path.normpath(args.olcusDir)
 
+    return (config, validations, olcusDir)
+
+
+def main(argv):
+    """Analyze a 'raw' file describing Olcus antenna data from a Beery Lab
+    vole group-living RFID apparatus.  Infers co-habitation bouts and total
+    co-hab duration for each pair of animals."""
+
     print("\n===================================")
-    print("Voletron v0.1, 2020-12-27")
+    print("Voletron v0.2, 2022-08-14")
     print("http://github.com/beerylab/voletron")
     print("===================================")
     print("")
 
+    ### Parse command-line arguments
+
+    args = _parse_args(argv)
+    timezone = pytz.timezone(args.timezone)
+
+    ### Read input config and validation files
+
+    (config, validations, olcusDir) = _parse_config(args)
+
+    ### Read raw data
+
     print("\nReading Data:")
     print("-----------------------------")
-    reads = parse_raw_dir(olcusDir)
+    reads = parse_raw_dir(olcusDir, timezone)
 
     # The first read may require inserting a missing read before it;
     # start the experiment 5 ms earlier to account for this.
-    first_read_time = parse_first_read(args.olcusDir).timestamp - 0.005
+    first_read_time: float = parse_first_read(args.olcusDir, timezone).timestamp - 0.005
     if args.start != None:
-        analysis_start_time = datetime.datetime.strptime(
+        analysis_start_time = timezone.localize(datetime.datetime.strptime(
             args.start, "%d.%m.%Y %H:%M:%S:%f"
-        ).timestamp()
+        )).timestamp()
     else:
         analysis_start_time = first_read_time
+
+    ### Initial cleanup of the reads, per animal
 
     reads_per_animal = preprocess_reads(
         reads, config.tag_id_to_start_chamber.keys(), config.tag_id_to_name
@@ -121,8 +159,6 @@ def main(argv):
 
     unobserved_animals = [kk for (kk, vv) in reads_per_animal.items() if len(vv) == 0]
     if unobserved_animals:
-
-
         print("\n\n-----------------------------")
         print("WARNING: Animals in config but not observed:")
         print(unobserved_animals)
@@ -130,9 +166,9 @@ def main(argv):
 
     last_read_time = max([vv[-1].timestamp for vv in reads_per_animal.values()])
     if args.end != None:
-        analysis_end_time = datetime.datetime.strptime(
+        analysis_end_time = timezone.localize(datetime.datetime.strptime(
             args.end, "%d.%m.%Y %H:%M:%S:%f"
-        ).timestamp()
+        )).timestamp()
     else:
         analysis_end_time = last_read_time
 
@@ -143,22 +179,32 @@ def main(argv):
     print("                 Analysis End: {}".format(format_time(analysis_end_time)))
     print("   Experiment End (last read): {}".format(format_time(last_read_time)))
 
-    # Infer animal trajectories from antenna reads
+    ### Infer animal trajectories from antenna reads
+
     trajectories = AllAnimalTrajectories(
         first_read_time, config.tag_id_to_start_chamber, reads_per_animal
     )
 
+    # all_chambers =  [item for sublist in apparatus_chambers.values() for item in sublist]
+    
+    # print("----CHAMBERS")
+    # print(all_chambers)
+    # print("----CHAMBERS")
+
     # Simulate state forwards, accumulating stats in the state object
     # and write it out along the way
-
-    state = State(first_read_time, config.tag_id_to_start_chamber)
+    state = CoDwellAccumulator(first_read_time, config.tag_id_to_start_chamber, all_chambers)
     for t in trajectories.traversals():
         state.update_state_from_traversal(t)
-    state.end()
+    co_dwells = state.end(analysis_end_time)
+
+    # Slice out the time span of interest for analysis
+    # TODO(soergel): bins here
+    analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
 
     # Output
 
-    exp_name = os.path.basename(olcusDir)
+    exp_name = str(os.path.basename(olcusDir))
 
     for (desired_start_chamber, chambers) in apparatus_chambers.items():
 
@@ -172,9 +218,11 @@ def main(argv):
         out_dir = os.path.join(olcusDir, "voletron_" + desired_start_chamber)
         os.makedirs(out_dir)
 
+        # Trajectory-based outputs
+
         if args.validation:
             # Validation
-            validate(
+            write_validation(
                 tag_ids,
                 out_dir,
                 exp_name,
@@ -183,7 +231,7 @@ def main(argv):
                 validations,
             )
 
-        writeChamberTimes(
+        write_chamber_times(
             config,
             tag_ids,
             chambers,
@@ -193,36 +241,8 @@ def main(argv):
             analysis_start_time,
             analysis_end_time,
         )
-        writeCohabs(
-            config,
-            tag_ids,
-            out_dir,
-            exp_name,
-            state,
-            analysis_start_time,
-            analysis_end_time,
-        )
-        writeGroupCohabs(
-            config,
-            tag_ids,
-            out_dir,
-            exp_name,
-            state,
-            analysis_start_time,
-            analysis_end_time,
-            config.tag_id_to_name,
-        )
-        writeGroupSizes(
-            tag_ids,
-            out_dir,
-            exp_name,
-            state,
-            analysis_start_time,
-            analysis_end_time,
-            config.tag_id_to_name,
-        )
-        writeLongDwells(config, tag_ids, out_dir, exp_name, trajectories)
 
+        write_long_dwells(config, tag_ids, out_dir, exp_name, trajectories)
 
         write_activity(
             out_dir,
@@ -232,4 +252,31 @@ def main(argv):
             analysis_end_time,
             args.bin_seconds,
         )
+
+        # StateAnalyzer-based outputs
+
+        write_pair_inclusive_cohabs(
+            config,
+            out_dir,
+            exp_name,
+            analyzer,
+        )
+
+        write_group_chamber_cohabs(
+            tag_ids,
+            out_dir,
+            exp_name,
+            analyzer,
+            config.tag_id_to_name,
+        )
+
+        write_group_sizes(
+            tag_ids,
+            out_dir,
+            exp_name,
+            analyzer,
+            config.tag_id_to_name,
+        )
+
+
 main(sys.argv)

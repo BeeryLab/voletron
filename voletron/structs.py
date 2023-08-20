@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import NamedTuple
+from typing import List, NamedTuple
 
 # An antenna placed in a tube, near where that tube connects to a given cage.
 # Tubes and cages are identified by string IDs.
@@ -33,11 +33,15 @@ Validation = NamedTuple(
 # cage where the animal stayed during this time.
 Dwell = NamedTuple("Dwell", [("start", int), ("end", int), ("chamber", str)])
 
+# Describes pairs or groups of animals together in a given chamber during a
+# given time span.
+CoDwell = NamedTuple("CoDwell", [("tag_ids", List[str]), ("start", int), ("end", int), ("chamber", str)])
+
 # An instance of an animal staying put for a very long time, which likely
-# indicates an error of some kind
+# indicates an error of some kind.
 LongDwell = NamedTuple(
     "LongDwell",
-    [("tag_id", int), ("chamber", str), ("start_time", int), ("minutes", int)],
+    [("tag_id", str), ("chamber", str), ("start_time", int), ("minutes", int)],
 )
 
 # One instance of an animal crossing from one chamber (tube or cage) to another.
@@ -59,17 +63,17 @@ Config = NamedTuple(
 # provides the sum of the durations of those events.
 # When the two animal IDs are the same, the duration should roughly match the
 # length of the experiment--perhaps with some noise due to various error cases.
-CoDwellAggregate = NamedTuple(
-    "CoDwellAggregate",
-    [("animal_a", str), ("animal_b", str), ("count", int), ("duration", float)],
-)
+# CoDwellAggregate = NamedTuple(
+#     "CoDwellAggregate",
+#     [("animal_a", str), ("animal_b", str), ("count", int), ("duration", float)],
+# )
 
 GroupDwellAggregate = NamedTuple(
     "GroupDwellAggregate",
-    [("group", str), ("count", int), ("duration", float)],
+    [("tag_ids", List[str]), ("chamber", str), ("count", int), ("duration_seconds", float)],
 )
 
-def chamberBetween(antennaA, antennaB):
+def chamberBetween(antennaA: Antenna, antennaB: Antenna):
     """Determine which chamber is between two Antennae."""
     if antennaA == antennaB:
         raise ValueError("There is no chamber between an antenna and itself")

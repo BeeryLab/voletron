@@ -17,7 +17,8 @@ import datetime
 import glob
 import os
 import sys
-from typing import Generator
+from typing import Generator, Union
+from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
 from voletron.apparatus_config import olcus_id_to_antenna_hardcode
 from voletron.structs import Antenna, Config, Read
@@ -31,7 +32,7 @@ def olcus_id_to_antenna(device_id: int, antenna_id: int):
     return olcus_id_to_antenna_hardcode[device_id][antenna_id]
 
 
-def parse_raw_line(line) -> Read:
+def parse_raw_line(line: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Read:
     """Parse a line of the "raw" format, producing a Read object.
 
     Args:
@@ -49,10 +50,11 @@ def parse_raw_line(line) -> Read:
 
     # The time given in the Olcus file is the *local* time.  No time zone is given.
     dt = datetime.datetime.strptime(date_timestamp, "%d.%m.%Y %H:%M:%S:%f")
+    dt = timezone.localize(dt)
     return Read(tag_id, dt.timestamp(), antenna)
 
 
-def parse_raw_file(filename) -> Generator[Read, None, None]:
+def parse_raw_file(filename: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Generator[Read, None, None]:
     """Parse a raw input file, producing a stream of Read objects.
 
     Args:
@@ -65,12 +67,12 @@ def parse_raw_file(filename) -> Generator[Read, None, None]:
     with open(filename) as file:
         file.readline()  # skip headers
         for line in file:
-            read = parse_raw_line(line)
+            read = parse_raw_line(line, timezone)
             if read:
                 yield read
 
 
-def parse_first_read(dirname) -> Read:
+def parse_first_read(dirname: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Read:
     """Obtain the first read from the first raw file in a directory.
     Args:
         dirname: The directory name from which to read.
@@ -85,11 +87,11 @@ def parse_first_read(dirname) -> Read:
         read = None
         while not read:
             line = file.readline()
-            read = parse_raw_line(line)
+            read = parse_raw_line(line, timezone)
     return read
 
 
-def parse_raw_dir(dirname) -> Generator[Read, None, None]:
+def parse_raw_dir(dirname: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Generator[Read, None, None]:
     """Parse raw files in a directory in order, producing a stream of Reads.
 
     Args:
@@ -101,5 +103,5 @@ def parse_raw_dir(dirname) -> Generator[Read, None, None]:
     # chronological sort.
     files = sorted(glob.glob(os.path.join(dirname, "raw*.csv")))
     for f in files:
-        for read in parse_raw_file(f):
+        for read in parse_raw_file(f, timezone):
             yield read

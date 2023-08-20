@@ -20,6 +20,8 @@ from voletron.structs import Read, chamberBetween
 def preprocess_reads(
     reads: Iterable[Read], tag_ids: Iterable[int], tag_id_to_name: Dict[int, str]
 ) -> Dict[int, List[Read]]:
+    # Normalize the reads per animal by spacing them out in time a bit and
+    # swapping the order of nearly-simultaneous reads for increased parsimony.
     reads_per_animal = split_reads_per_animal(reads, tag_ids)
 
     print("\nPreprocessing:")

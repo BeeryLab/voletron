@@ -69,8 +69,8 @@ all_antennae = [
     for (index, antenna) in antennae.items()
 ]
 
-# all_chambers = sorted(
-#     list(set([item for a in all_antennae for item in [a.tube, a.cage]]))
-# )
-# all_chambers.append("ERROR")
+all_chambers = sorted(
+    list(set([item for a in all_antennae for item in [a.tube, a.cage]]))
+)
+all_chambers.append("ERROR")
 

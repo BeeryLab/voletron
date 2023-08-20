@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, call
 
 from voletron.parse_olcus import parse_raw_line
 from voletron.preprocess_reads import _parsimonious_reads, _spaced_reads
-from voletron.state import Chamber, State
+from voletron.co_dwell_accumulator import Chamber, CoDwellAccumulator
 from voletron.structs import Antenna, Dwell, Read, Traversal
 
 

@@ -42,14 +42,14 @@ for the next phase.
 """
 
 
-def short_dwell_chamber(antenna):
+def short_dwell_chamber(antenna: Antenna):
     """Heuristic for which chamber an animal was likely in, given two
     consecutive reads at the same antenna with a brief time interval.
     """
     return antenna.tube
 
 
-def long_dwell_chamber(antenna):
+def long_dwell_chamber(antenna: Antenna):
     """Heuristic for which chamber an animal was likely in, given two
     consecutive reads at the same antenna with a long time interval.
     """
@@ -57,13 +57,13 @@ def long_dwell_chamber(antenna):
 
 
 class TwoMissingReadsException(Exception):
-    def __init__(self, ambiguous_seconds, readA, readB):
+    def __init__(self, ambiguous_seconds: float, readA: Read, readB: Read):
         self.ambiguous_seconds = ambiguous_seconds
         self.readA = readA
         self.readB = readB
 
 
-def infer_missing_read(readA, readB):
+def infer_missing_read(readA: Read, readB: Read):
     """Given two non-adjacent Reads, infer a single Read between them.
 
     Only a single Read can be inferred by this method.  If two consecutive Reads
@@ -118,7 +118,7 @@ class ReadFate(Enum):
 class _AnimalTrajectory:
     """Tracks the path of a single animal through the apparatus over time."""
 
-    def __init__(self, tag_id, initial_chamber, start_time):
+    def __init__(self, tag_id: str, initial_chamber: str, start_time: float):
         self.tag_id = tag_id
         self.chamber = initial_chamber
         self.dwells = [
@@ -126,7 +126,7 @@ class _AnimalTrajectory:
         ]  # The animal was outside the apparatus before the experiment
         self.priorRead = Read(tag_id, start_time, Antenna(None, initial_chamber))
 
-    def _append_dwell(self, start, end, chamber):
+    def _append_dwell(self, start: float, end: float, chamber: str):
         """
         Records that the animal was in a chamber during a time interval.
 
@@ -151,7 +151,7 @@ class _AnimalTrajectory:
                 start = lastDwell.start
         self.dwells.append(Dwell(start, end, chamber))
 
-    def update_from_read(self, read) -> ReadFate:
+    def update_from_read(self, read: Read) -> ReadFate:
         """
         Extends the tracked Trajectory based on a new Read.
 
@@ -253,7 +253,9 @@ class _AnimalTrajectory:
             if dwell_time > 60 * 60 * 4:  # 6 hours
                 yield LongDwell(self.tag_id, d.chamber, d.start, dwell_time / 60)
 
-    def time_per_chamber(self, analysis_start_time, analysis_end_time) -> Dict[str, int]:
+    def time_per_chamber(
+        self, analysis_start_time: float, analysis_end_time: float
+    ) -> Dict[str, int]:
         chamber_times = defaultdict(lambda: 0)
         for d in self.dwells:
             start = max(d.start, analysis_start_time)
@@ -262,7 +264,9 @@ class _AnimalTrajectory:
                 chamber_times[d.chamber] += end - start
         return chamber_times
 
-    def get_locations_between(self, analysis_start_time, analysis_end_time) -> List[str]:
+    def get_locations_between(
+        self, analysis_start_time: float, analysis_end_time: float
+    ) -> List[str]:
         chambers = []
         for d in self.dwells:
             start = max(d.start, analysis_start_time)
@@ -271,7 +275,9 @@ class _AnimalTrajectory:
                 chambers.append(d.chamber)
         return chambers
 
-    def count_traversals_between(self, analysis_start_time, analysis_end_time) -> int:
+    def count_traversals_between(
+        self, analysis_start_time: float, analysis_end_time: float
+    ) -> int:
         count = 0
         for d in self.dwells:
             start = max(d.start, analysis_start_time)
@@ -287,7 +293,12 @@ class AllAnimalTrajectories:
     a sequence of antenna reads.
     """
 
-    def __init__(self, start_time, tag_id_to_start_chamber: Dict[str, str], reads_per_animal):
+    def __init__(
+        self,
+        start_time: float,
+        tag_id_to_start_chamber: Dict[str, str],
+        reads_per_animal: Dict[int, List[Read]],
+    ):
         self.animalTrajectories = {
             tag_id: _AnimalTrajectory(tag_id, initialChamber, start_time)
             for [tag_id, initialChamber] in tag_id_to_start_chamber.items()
@@ -342,5 +353,5 @@ class AllAnimalTrajectories:
                 del peeks[next_tag_id]
             yield result
 
-    def get_locations_between(self, tag_id, start, end) -> List[str]:
+    def get_locations_between(self, tag_id: str, start: float, end: float) -> List[str]:
         return self.animalTrajectories[tag_id].get_locations_between(start, end)

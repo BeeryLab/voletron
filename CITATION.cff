@@ -1,14 +1,14 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
- - family-names: Soergel
-    given-names: David A. W. 
-    orcid: https://orcid.org/0000-0002-1083-7651
-  - family-names: Beery
-    given-names: Annaliese K.
-    orcid: https://orcid.org/0000-0002-1249-9182
-title: "Voletron"
-version: 1.0
+- family-names: "Soergel"
+  given-names: "David"
+  orcid: "https://orcid.org/0000-0002-1083-7651"
+- family-names: "Beery"
+  given-names: "Annaliese"
+  orcid: "https://orcid.org/0000-0002-1249-9182"
+title: "voletron"
+version: 1.0.0
 doi: 
-date-released: 2024-5-1
+date-released: 2024-05-01
 url: "https://github.com/BeeryLab/voletron"

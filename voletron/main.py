@@ -78,7 +78,16 @@ def _parse_args(argv):
     parser.add_argument(
         "--bin_seconds",
         type=int,
-        help="Bin size, in seconds, for time-series outputs.",
+        help="Bin size, in seconds, for time-series outputs.  Default: 1800",
+        default=1800
+    )
+    parser.add_argument(
+        "--arena_time_offset_seconds",
+        type=int,
+        help="Seconds after the first tag read when the 'time in arena' clock "
+        "is considered to begin, for purposes of activity time series "
+        "reporting.  Default: 600",
+        default=600
     )
     parser.add_argument(
         "timezone",
@@ -243,17 +252,31 @@ def main(argv):
         )
 
         write_long_dwells(config, tag_ids, out_dir, exp_name, trajectories)
-
+        
+        # This one builds its own analyzer per bin
         write_activity(
             out_dir,
             exp_name,
+            "wall_clock",
             trajectories,
+            co_dwells,
             analysis_start_time,
             analysis_end_time,
             args.bin_seconds,
         )
+        
+        write_activity(
+            out_dir,
+            exp_name,
+            "arena_time",
+            trajectories,
+            co_dwells,
+            first_read_time + args.arena_time_offset_seconds,
+            last_read_time,
+            args.bin_seconds,
+        )
 
-        # StateAnalyzer-based outputs
+        # TimeSpanAnalyzer-based outputs
 
         write_pair_inclusive_cohabs(
             config,

@@ -107,6 +107,13 @@ This project is not an official Google project. It is not supported by Google
 and Google specifically disclaims all warranties as to its quality,
 merchantability, or fitness for a particular purpose.
 
+## Changelog
+
+Version 2.0
+- Complete refactoring / rewrite
+- Output cohab in tubes, not just in cages
+- Binned activity
+
 ## Known Todos
 
 - TODO: Add log file, containing both the command line and the text currently
@@ -116,7 +123,7 @@ merchantability, or fitness for a particular purpose.
   generate histogram of activity pattern over the course of the day (for
   ultradian rhythms)
 - TODO: consider migrating to Colab/Jupyter
-- TODO: output cohab in tubes, not just in cages
+- TODO: more tests
 
 
 1. Output file that sums seconds of cohab between voles in a specific chamber. Include all groupings from group cohab file (vole A+B, A+C, A+D, A+B+C, A+B+D, A+C+D, A+B+C+D etc.) for each chamber (arena, cage 1,2,3,4). Include dwells and seconds. (Home cage analysis)

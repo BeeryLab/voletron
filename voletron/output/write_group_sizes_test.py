@@ -18,7 +18,7 @@ import unittest
 import tempfile
 from unittest.mock import MagicMock
 
-from voletron.output import write_group_sizes
+from voletron.output.write_group_sizes import write_group_sizes
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Traversal
@@ -26,7 +26,7 @@ from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Tra
 # TODO write all the tests
 
 
-class TestOutput(unittest.TestCase):
+class TestWriteGroupSizes(unittest.TestCase):
     def test_group_sizes_nosolo_never(self):
         tag_ids = [TagID('foo'), TagID('bar')]
         out_dir = tempfile.mkdtemp()

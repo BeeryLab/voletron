@@ -38,7 +38,7 @@ class TestWriteGroupSizes(unittest.TestCase):
 
         # Animals foo and bar start in chambers 1 and 2, and never move, so
         # they're always alone.
-        traversals = [] #[Traversal(10, 'foo', 'chamber_1', 'chamber_1')]
+        traversals = []
 
         state = CoDwellAccumulator(analysis_start_time, tag_id_to_start_chamber, [ChamberName("chamber_1"), ChamberName("chamber_2")])
         for t in traversals:

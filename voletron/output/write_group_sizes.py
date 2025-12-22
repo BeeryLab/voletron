@@ -28,12 +28,6 @@ def write_group_sizes(
                         len(group_dwell.tag_ids)
                     ] + group_dwell.duration_seconds)
 
-        # for (group, dwells, seconds) in analyzer.group_dwell_stats():
-        #     group_tag_ids = group.split(" ")
-        #     for tag_id in group_tag_ids:
-        #         if tag_id in tag_ids:
-        #             tag_id_group_size_seconds[tag_id][len(group_tag_ids)] += seconds
-
         for (tag_id, group_size_seconds) in tag_id_group_size_seconds.items():
             aaa = ",".join(map(lambda a: "{:.0f}".format(a), group_size_seconds[1:]))
 

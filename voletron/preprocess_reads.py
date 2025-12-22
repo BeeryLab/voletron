@@ -110,4 +110,4 @@ def _parsimonious_reads(
                     b_later = Read(b.tag_id, c.timestamp, b.antenna)
                     reads[i : i + 4] = [a, c_earlier, b_later, d]
 
-    # print("Parsimony swaps: {} {}".format(tag_id_to_name[tag_id], count))
+    print("Parsimony swaps: {} {}".format(tag_id_to_name[tag_id], count))

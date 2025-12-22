@@ -19,7 +19,7 @@ def write_chamber_times(
             if not tag_id in tag_ids:
                 continue
             ct = trajectory.time_per_chamber(analysis_start_time, analysis_end_time)
-            # f.write("{}, {:.0f}".format(config.tag_id_to_name[tag_id], sum(ct.values())))
+            
             aaa = ",".join(map(lambda c: "{:.0f}".format(ct[c]), chambers))
             f.write(
                 "{},{},{:.0f}\n".format(

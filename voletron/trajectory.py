@@ -13,11 +13,9 @@
 # limitations under the License.
 
 
-import datetime
-import sys
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from enum import Enum
-from typing import Dict, Generator, List, Optional
+from typing import Dict, Generator, List
 
 from voletron.apparatus_config import all_antennae
 from voletron.types import CHAMBER_ERROR, CHAMBER_OUTSIDE, Antenna, ChamberName, DurationMinutes, DurationSeconds, Dwell, LongDwell, Read, TagID, TimestampSeconds, Traversal, chamberBetween
@@ -212,8 +210,6 @@ class _AnimalTrajectory:
                     missingRead = infer_missing_read(self.priorRead, read)
                     a = self.update_from_read(missingRead)
                     assert a == ReadFate.Move
-                    # b = self.update_from_read(read)
-                    # assert b == ReadFate.Move
                     dwellChamber = chamberBetween(missingRead.antenna, read.antenna)
                     if not dwellChamber:
                         raise ValueError("Inferred read did not resolve the missing read situation.")
@@ -320,14 +316,10 @@ class AllAnimalTrajectories:
             fate = animalTrajectory.update_from_read(end_read)
             fate_counts[fate] += 1
         count = sum(fate_counts.values())
-        fate_percent = {
+        self.fate_percent = {
             key.name: "{:>8} ({:>6.2%})".format(value, value / count)
             for key, value in fate_counts.items()
         }
-        # print("\nRead Interpretations:")
-        # print("-----------------------------")
-        # for [key, value] in fate_percent.items():
-        #     print("{:>10}: {}".format(key, value))
 
     def traversals(self) -> Generator[Traversal, None, None]:
         """

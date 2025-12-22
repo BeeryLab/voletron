@@ -17,6 +17,7 @@ import datetime
 import glob
 import os
 import sys
+from typing import Dict
 import pytz
 
 from voletron.output.output import write_outputs
@@ -30,7 +31,7 @@ from voletron.preprocess_reads import preprocess_reads
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
-from voletron.types import Config, TimestampSeconds, Validation
+from voletron.types import Config, Read, TagID, TimestampSeconds, Validation
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 
 
@@ -149,6 +150,8 @@ def main(argv):
     
     # Slice out the time span of interest for analysis
     # TODO(soergel): bins here
+    # This analyzer is for the whole analysis period.
+    # Individual analyzers per time bin are built elsewhere.
     analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
     
     write_outputs(
@@ -226,11 +229,18 @@ def _print_time_intervals(first_read_time, analysis_start_time, analysis_end_tim
     print("   Experiment End (last read): {}".format(format_time(last_read_time)))
 
 
-def _build_trajectories(first_read_time, config, reads_per_animal):
+def _build_trajectories(first_read_time: TimestampSeconds, config: Config, reads_per_animal: Dict[TagID, list[Read]]) -> AllAnimalTrajectories:
     """Build animal trajectories from preprocessed reads."""
-    return AllAnimalTrajectories(
+    all_animal_trajectories = AllAnimalTrajectories(
         first_read_time, config.tag_id_to_start_chamber, reads_per_animal
     )
+
+    print("\nRead Interpretations:")
+    print("-----------------------------")
+    for [key, value] in all_animal_trajectories.fate_percent.items():
+        print("{:>10}: {}".format(key, value))
+        
+    return all_animal_trajectories
 
 
 main(sys.argv)

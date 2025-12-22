@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Dict
+from typing import Callable, Dict, Optional
 
 # import .trajectory
 from collections import defaultdict
@@ -22,15 +22,14 @@ from voletron.util import seconds_between_timestamps
 from voletron.types import CHAMBER_ERROR, ChamberName, CoDwell, TagID, TimestampSeconds, Traversal
 
 
-# type RecordGroupDwellFn = (tag_ids: List[str], start: float, end: float, chamber: str) -> Void
+RecordGroupDwellFn = Callable[[List[TagID], Optional[TimestampSeconds], TimestampSeconds, ChamberName], None]
 
 
 class Chamber:
-    def __init__(self, name: ChamberName, record_group_dwell):  # RecordGroupDwellFn):
+    def __init__(self, name: ChamberName, record_group_dwell: RecordGroupDwellFn):
         self.name = name
         self.animals_since : Dict[TagID, TimestampSeconds] = defaultdict()
         self.last_event = None
-        # self.record_co_dwell = record_co_dwell
         self.record_group_dwell = record_group_dwell
 
     def arrive(self, timestamp: TimestampSeconds, tag_id: TagID) -> None:
@@ -52,15 +51,10 @@ class Chamber:
         if len(tag_ids) > 0:
             self.record_group_dwell(tag_ids, self.last_event, timestamp, self.name)
         del self.animals_since[tag_id]
-        # for (other_tag_id, other_arrive_time) in self.animals_since.items():
-        #     co_dwell_start = max(arrive_time, other_arrive_time)
-        #     self.record_co_dwell(tag_id, other_tag_id, co_dwell_start, timestamp, self.name)
-        # self.record_co_dwell(tag_id, tag_id, arrive_time, timestamp, self.name)
         self.last_event = timestamp
 
 
 class CoDwellAccumulator:
-    # Accumulate state
 
     def __init__(
         self,
@@ -70,17 +64,12 @@ class CoDwellAccumulator:
     ):
         if not experiment_start_time:
             raise ValueError("Experiment must have a non-zero start time")
-        # self.chambers = defaultdict(
-        #    lambda: Chamber(self._record_co_dwell, self._record_group_dwell)
-        # )
 
         self._end_was_called = False
         self._chambers = {
             chamber: Chamber(chamber, self._record_group_dwell) for chamber in chambers
         }
-        # self.co_dwells = defaultdict(lambda: defaultdict(list))
-        self._co_dwells: List[CoDwell] = []  # defaultdict(list)
-        # self.group_chamber_dwells = defaultdict(lambda: defaultdict(list))
+        self._co_dwells: List[CoDwell] = [] 
 
         for [tag_id, start_chamber] in tag_id_to_start_chamber.items():
             self._chambers[start_chamber].arrive(experiment_start_time, tag_id)
@@ -93,13 +82,8 @@ class CoDwellAccumulator:
         if traversal.dest and traversal.dest != CHAMBER_ERROR:
             self._chambers[traversal.dest].arrive(traversal.timestamp, traversal.tag_id)
 
-    # def _record_co_dwell(self, tag_id_a, tag_id_b, start, end, chamber):
-    #     if tag_id_a > tag_id_b:
-    #         (tag_id_a, tag_id_b) = (tag_id_b, tag_id_a)
-    #     self.co_dwells[tag_id_a][tag_id_b].append(CoDwell(start, end, chamber))
-
     def _record_group_dwell(
-        self, tag_ids: List[TagID], start: TimestampSeconds, end: TimestampSeconds, chamber: ChamberName
+        self, tag_ids: List[TagID], start: Optional[TimestampSeconds], end: TimestampSeconds, chamber: ChamberName
     ) -> None:
         if not start:
             return
@@ -107,7 +91,6 @@ class CoDwellAccumulator:
 
     def end(self, end_time: TimestampSeconds) -> List[CoDwell]:
         self._end_was_called = True
-        # end_time = max([c.last_event for c in self.chambers.values() if c.last_event])
         for chamber in self._chambers.values():
             for tag_id in list(chamber.animals_since.keys()):
                 chamber.depart(end_time, tag_id)

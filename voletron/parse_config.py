@@ -18,7 +18,7 @@ from typing import Dict, Union
 from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
 from voletron.types import AnimalName, Antenna, ChamberName, Config, Read, TagID, TimestampSeconds, Validation
-
+from voletron.apparatus_config import all_chambers
 
 def parse_config(filename: str) -> Config:
     """Parse a run configuration file.
@@ -31,16 +31,22 @@ def parse_config(filename: str) -> Config:
 
     Returns: a Config object, mapping tag_id to start_chamber and to animal_name.
     """
-    tag_id_to_start_chamber = {}
-    tag_id_to_name = {}
+    tag_id_to_start_chamber : Dict[TagID, ChamberName] = {}
+    tag_id_to_name : Dict[TagID, AnimalName] = {}
     with open(filename) as file:
-        file.readline()  # skip headers
-        # TODO: validate headers
+        header = file.readline().strip()
+        headers = [x.strip() for x in header.split(",")]
+        expected_headers = ["AnimalName", "TagId", "StartChamber"]
+        if headers != expected_headers:
+            raise ValueError(f"Invalid headers. Expected {expected_headers}, got {headers}")
+        
         for line in file:
             (animal_name, tag_id, start_chamber) = [x.strip() for x in line.split(",")]
-            tag_id_to_name[tag_id] = animal_name
-            tag_id_to_start_chamber[tag_id] = start_chamber
-            # TODO: validate start_chamber matches apparatus_config
+            tag_id_to_name[TagID(tag_id)] = AnimalName(animal_name)
+            tag_id_to_start_chamber[TagID(tag_id)] = ChamberName(start_chamber)
+            if ChamberName(start_chamber) not in all_chambers:
+                raise ValueError(f"Invalid start chamber {start_chamber} for animal {animal_name}")
+            
     return Config(tag_id_to_name, tag_id_to_start_chamber)
 
 
@@ -57,8 +63,12 @@ def parse_validation(filename: str, name_to_tag_id: Dict[AnimalName, TagID], tim
     """
     result: list[Validation] = []
     with open(filename) as file:
-        file.readline()  # skip headers
-        # TODO: validate headers
+        header = file.readline().strip()
+        headers = [x.strip() for x in header.split(",")]
+        expected_headers = ["Timestamp", "AnimalID", "Chamber"]
+        if headers != expected_headers:
+            raise ValueError(f"Invalid headers. Expected {expected_headers}, got {headers}")
+        
         for line in file:
             line = line.strip()
             if line.startswith("#") or line == "" or line == ",,":
@@ -69,8 +79,13 @@ def parse_validation(filename: str, name_to_tag_id: Dict[AnimalName, TagID], tim
                 timestamp = TimestampSeconds(timezone.localize(datetime.datetime.strptime(
                     time_str, "%d.%m.%Y %H:%M"
                 )).timestamp())
+
+                if ChamberName(chamber) not in all_chambers:
+                    raise ValueError(f"Invalid chamber {chamber} for animal {animalid} at time {time_str}")
+            
                 result.append(Validation(timestamp, tag_id, ChamberName(chamber)))
-                # TODO: validate chamber matches apparatus_config
+                
+               
             except KeyError:
                 print("Validation config contains unknown animal: {}".format(animalid))
 

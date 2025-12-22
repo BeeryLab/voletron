@@ -81,7 +81,7 @@ class TestState(unittest.TestCase):
 
         co_dwells = s.end(TimestampSeconds(300))
         analyzer = TimeSpanAnalyzer(co_dwells, TimestampSeconds(0), TimestampSeconds(300))
-        # print(analyzer.co_dwells)
+        
         self.assertEqual(len(analyzer.co_dwells), 3)
         self.assertEqual(analyzer.co_dwells[0], CoDwell([TagID('tag_a'), TagID('tag_b')], TimestampSeconds(100), TimestampSeconds(200), ChamberName('CentralA')))
         self.assertEqual(analyzer.co_dwells[1], CoDwell([TagID('tag_b')], TimestampSeconds(200), TimestampSeconds(300), ChamberName('CentralA')))

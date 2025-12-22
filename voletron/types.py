@@ -77,17 +77,6 @@ Config = NamedTuple(
     "Config", [("tag_id_to_name", Dict[TagID, AnimalName]), ("tag_id_to_start_chamber", Dict[TagID, ChamberName])]
 )
 
-# Aggregate statistics for the presence of two animals in the same chamber.
-# animal_a should be lexicographically less than or equal to animal_b.
-# `counts` provides the number of distinct 'co-dwell' events, and `duration`
-# provides the sum of the durations of those events.
-# When the two animal IDs are the same, the duration should roughly match the
-# length of the experiment--perhaps with some noise due to various error cases.
-# CoDwellAggregate = NamedTuple(
-#     "CoDwellAggregate",
-#     [("animal_a", str), ("animal_b", str), ("count", int), ("duration", float)],
-# )
-
 GroupDwellAggregate = NamedTuple(
     "GroupDwellAggregate",
     [("tag_ids", List[TagID]), ("chamber", ChamberName), ("count", int), ("duration_seconds", DurationSeconds)],

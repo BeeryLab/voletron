@@ -19,25 +19,25 @@ from unittest.mock import MagicMock, call
 from voletron.parse_olcus import parse_raw_line
 from voletron.co_dwell_accumulator import Chamber, CoDwellAccumulator
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.structs import CoDwell, Traversal
+from voletron.types import HabitatName, CoDwell, Traversal, TagID, ChamberName, TimestampSeconds
 
 
 class TestChamber(unittest.TestCase):
     def test_arrive(self):
         record_group_dwell = MagicMock()
-        c = Chamber("foo", record_group_dwell)  # arrive doesn't use record_co_dwell
+        c = Chamber(ChamberName("foo"), record_group_dwell)  # arrive doesn't use record_co_dwell
         self.assertIsNone(c.last_event)
         self.assertEqual(dict(c.animals_since), {})
-        c.arrive(100, "tag_a")
+        c.arrive(TimestampSeconds(100), TagID("tag_a"))
         self.assertEqual(c.last_event, 100)
         self.assertEqual(dict(c.animals_since), {"tag_a": 100})
 
     def test_arrive_depart(self):
         record_group_dwell = MagicMock()
-        c = Chamber("foo", record_group_dwell)
-        c.arrive(100, "tag_a")
-        c.depart(200, "tag_a")
-        c.arrive(300, "tag_b")
+        c = Chamber(ChamberName("foo"), record_group_dwell)
+        c.arrive(TimestampSeconds(100), TagID("tag_a"))
+        c.depart(TimestampSeconds(200), TagID("tag_a"))
+        c.arrive(TimestampSeconds(300), TagID("tag_b"))
         self.assertEqual(c.last_event, 300)
         self.assertEqual(dict(c.animals_since), {"tag_b": 300})
         # record_co_dwell.assert_called_once_with("tag_a", "tag_a", 100, 200, "foo")
@@ -45,16 +45,16 @@ class TestChamber(unittest.TestCase):
 
     def test_depart_before_arrive(self):
         record_group_dwell = MagicMock()
-        c = Chamber("foo", record_group_dwell)
+        c = Chamber(ChamberName("foo"), record_group_dwell)
         with self.assertRaises(ValueError):
-            c.depart(100, "tag_a")
+            c.depart(TimestampSeconds(100), TagID("tag_a"))
 
     def test_co_dwell(self):
         record_group_dwell = MagicMock()
-        c = Chamber("foo", record_group_dwell)
-        c.arrive(100, "tag_a")
-        c.arrive(200, "tag_b")
-        c.depart(300, "tag_a")
+        c = Chamber(ChamberName("foo"), record_group_dwell)
+        c.arrive(TimestampSeconds(100), TagID("tag_a"))
+        c.arrive(TimestampSeconds(200), TagID("tag_b"))
+        c.depart(TimestampSeconds(300), TagID("tag_a"))
         self.assertEqual(c.last_event, 300)
         self.assertEqual(dict(c.animals_since), {"tag_b": 200})
         self.assertEqual(len(record_group_dwell.mock_calls), 2)
@@ -63,29 +63,29 @@ class TestChamber(unittest.TestCase):
         )
 
 
-all_chambers = ["ArenaA", "Tube1", "Tube2", "Cage2"]
+all_chambers = [ChamberName("CentralA"), ChamberName("Tube1"), ChamberName("Tube2"), ChamberName("Cage2")]
 
 class TestState(unittest.TestCase):
 
     def test_traversal(self):
-        tag_id_to_start_chamber = {"tag_a": "ArenaA", "tag_b": "ArenaA"}
-        s = CoDwellAccumulator(100, tag_id_to_start_chamber, all_chambers)
-        s.update_state_from_traversal(Traversal(200, "tag_a", "ArenaA", "Tube1"))
+        tag_id_to_start_chamber = {TagID("tag_a"): ChamberName("CentralA"), TagID("tag_b"): ChamberName("CentralA")}
+        s = CoDwellAccumulator(TimestampSeconds(100), tag_id_to_start_chamber, all_chambers)
+        s.update_state_from_traversal(Traversal(TimestampSeconds(200), TagID("tag_a"), ChamberName("CentralA"), ChamberName("Tube1")))
 
-        self.assertEqual(list(s._chambers.keys()), ["ArenaA", "Tube1", "Tube2", "Cage2"])
-        self.assertEqual(dict(s._chambers["ArenaA"].animals_since), {"tag_b": 100})
-        self.assertEqual(s._chambers["ArenaA"].last_event, 200)
+        self.assertEqual(list(s._chambers.keys()), ["CentralA", "Tube1", "Tube2", "Cage2"])
+        self.assertEqual(dict(s._chambers[ChamberName("CentralA")].animals_since), {"tag_b": 100})
+        self.assertEqual(s._chambers[ChamberName("CentralA")].last_event, 200)
 
-        self.assertEqual(dict(s._chambers["Tube1"].animals_since), {"tag_a": 200})
-        self.assertEqual(s._chambers["Tube1"].last_event, 200)
+        self.assertEqual(dict(s._chambers[ChamberName("Tube1")].animals_since), {"tag_a": 200})
+        self.assertEqual(s._chambers[ChamberName("Tube1")].last_event, 200)
 
-        co_dwells = s.end(300)
-        analyzer = TimeSpanAnalyzer(co_dwells, 0, 300)
-        print(analyzer.co_dwells)
+        co_dwells = s.end(TimestampSeconds(300))
+        analyzer = TimeSpanAnalyzer(co_dwells, TimestampSeconds(0), TimestampSeconds(300))
+        # print(analyzer.co_dwells)
         self.assertEqual(len(analyzer.co_dwells), 3)
-        self.assertEqual(analyzer.co_dwells[0], CoDwell(['tag_a', 'tag_b'], 100, 200, 'ArenaA'))
-        self.assertEqual(analyzer.co_dwells[1], CoDwell(['tag_b'], 200, 300, 'ArenaA'))
-        self.assertEqual(analyzer.co_dwells[2], CoDwell(['tag_a'], 200, 300, 'Tube1'))
+        self.assertEqual(analyzer.co_dwells[0], CoDwell([TagID('tag_a'), TagID('tag_b')], TimestampSeconds(100), TimestampSeconds(200), ChamberName('CentralA')))
+        self.assertEqual(analyzer.co_dwells[1], CoDwell([TagID('tag_b')], TimestampSeconds(200), TimestampSeconds(300), ChamberName('CentralA')))
+        self.assertEqual(analyzer.co_dwells[2], CoDwell([TagID('tag_a')], TimestampSeconds(200), TimestampSeconds(300), ChamberName('Tube1')))
         # self.assertEqual(list(s.co_dwells.keys()), ["tag_a"])
         # self.assertEqual(
         #     dict(s.co_dwells["tag_a"]),

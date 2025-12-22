@@ -18,16 +18,17 @@ import datetime
 
 def seconds_between_timestamps(a, b):
     # Avoid knowing whether timestamps are sec, msec, or usec.
-    # TODO: (performance) compute this directly in sec, without
-    # converting back and forth
-    return abs(
-        (
-            datetime.datetime.fromtimestamp(a) - datetime.datetime.fromtimestamp(b)
-        ).total_seconds()
-    )
+    def to_seconds(t):
+        if t > 1e14:
+            return t / 1e6
+        if t > 1e11:
+            return t / 1e3
+        return t
+
+    return abs(to_seconds(a) - to_seconds(b))
 
 
-def format_time(a):
+def format_time(a, tz=None):
     return datetime.datetime.strftime(
-        datetime.datetime.fromtimestamp(a), "%d.%m.%Y %H:%M:%S:%f"
+        datetime.datetime.fromtimestamp(a, tz), "%d.%m.%Y %H:%M:%S:%f"
     )[:-3]

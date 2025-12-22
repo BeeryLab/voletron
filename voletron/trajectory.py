@@ -17,10 +17,10 @@ import datetime
 import sys
 from collections import defaultdict, namedtuple
 from enum import Enum
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Optional
 
 from voletron.apparatus_config import all_antennae
-from voletron.structs import Antenna, Dwell, LongDwell, Read, Traversal, chamberBetween
+from voletron.types import CHAMBER_ERROR, CHAMBER_OUTSIDE, Antenna, ChamberName, DurationMinutes, DurationSeconds, Dwell, LongDwell, Read, TagID, TimestampSeconds, Traversal, chamberBetween
 from voletron.util import seconds_between_timestamps
 
 """Converts a series of antenna Reads into a series of Traversals, describing
@@ -69,7 +69,7 @@ def infer_missing_read(readA: Read, readB: Read):
     Only a single Read can be inferred by this method.  If two consecutive Reads
     were skipped, the method fails.  For instance, given a star-shaped
     apparatus, if Reads A and B are on the cage side of two different tubes,
-    that suggests that *two* consecutive reads were missed, on the arena side
+    that suggests that *two* consecutive reads were missed, on the central arena side
     of both respective tubes.  This function does not address that situation,
     which we expect will never occur.
 
@@ -78,11 +78,11 @@ def infer_missing_read(readA: Read, readB: Read):
 
     On the one hand, we know (from independent video data) that the voles spend
     about half of their time in tubes, and about half in cages (or in the
-    arena).  That argument might support allocating the time equally.
+    central arena).  That argument might support allocating the time equally.
 
     However: if the voles spent any significant time in the tube, we would
     expect more reads there.  Thus, as a simple heuristic, we allocate all of
-    the ambiguous time to the arena.
+    the ambiguous time to the central arena.
 
     Args:
         readA: The first (earlier) read of the non-adjacent pair.
@@ -93,13 +93,13 @@ def infer_missing_read(readA: Read, readB: Read):
     """
     for antenna in all_antennae:
         if antenna.tube == readA.antenna.tube and antenna.cage == readB.antenna.cage:
-            # Tube => Arena case.
-            infer_timestamp = readA.timestamp + 0.001  # Add 1 ms to enforce sort order
+            # Tube => Central Arena case.
+            infer_timestamp = TimestampSeconds(readA.timestamp + 0.001)  # Add 1 ms to enforce sort order
             return Read(readA.tag_id, infer_timestamp, antenna)
         elif antenna.cage == readA.antenna.cage and antenna.tube == readB.antenna.tube:
-            # Arena => Tube case.
+            # Central Arena => Tube case.
             infer_timestamp = (
-                readB.timestamp - 0.001
+                TimestampSeconds(readB.timestamp - 0.001)
             )  # Subtract 1 ms to enforce sort order
             return Read(readA.tag_id, infer_timestamp, antenna)
 
@@ -118,15 +118,15 @@ class ReadFate(Enum):
 class _AnimalTrajectory:
     """Tracks the path of a single animal through the apparatus over time."""
 
-    def __init__(self, tag_id: str, initial_chamber: str, start_time: float):
+    def __init__(self, tag_id: TagID, initial_chamber: ChamberName, start_time: TimestampSeconds):
         self.tag_id = tag_id
         self.chamber = initial_chamber
         self.dwells = [
-            Dwell(start_time, start_time, None)
+            Dwell(start_time, start_time, CHAMBER_OUTSIDE)
         ]  # The animal was outside the apparatus before the experiment
-        self.priorRead = Read(tag_id, start_time, Antenna(None, initial_chamber))
+        self.priorRead = Read(tag_id, start_time, Antenna(CHAMBER_OUTSIDE, initial_chamber))
 
-    def _append_dwell(self, start: float, end: float, chamber: str):
+    def _append_dwell(self, start: TimestampSeconds, end: TimestampSeconds, chamber: ChamberName):
         """
         Records that the animal was in a chamber during a time interval.
 
@@ -165,7 +165,7 @@ class _AnimalTrajectory:
               based on the time between reads.  For a dwell time less than 10
               sec, choose one chamber (i.e., the adjoining tube).  For a dwell
               time greater than or equal to 10 sec, choose another chamber
-              (i.e., the adjoining cage or arena).
+              (i.e., the adjoining cage or central arena).
             * When the reads are from non-adjacent antennae, that means that the
               animal passed at least one antenna without a read being taken.  If
               only one antenna is between the two observed ones, we infer the
@@ -215,6 +215,8 @@ class _AnimalTrajectory:
                     # b = self.update_from_read(read)
                     # assert b == ReadFate.Move
                     dwellChamber = chamberBetween(missingRead.antenna, read.antenna)
+                    if not dwellChamber:
+                        raise ValueError("Inferred read did not resolve the missing read situation.")
                     fate = ReadFate.OneMissing
                 except TwoMissingReadsException:
                     # TODO: configurable warning threshold
@@ -224,7 +226,7 @@ class _AnimalTrajectory:
                     #         e.ambiguous_seconds, e.readA, e.readB
                     #     )
                     # )
-                    dwellChamber = "ERROR"
+                    dwellChamber = CHAMBER_ERROR
                     fate = ReadFate.TwoMissing
 
         self._append_dwell(self.priorRead.timestamp, read.timestamp, dwellChamber)
@@ -251,21 +253,21 @@ class _AnimalTrajectory:
         for d in self.dwells:
             dwell_time = d.end - d.start
             if dwell_time > 60 * 60 * 4:  # 6 hours
-                yield LongDwell(self.tag_id, d.chamber, d.start, dwell_time / 60)
+                yield LongDwell(self.tag_id, d.chamber, d.start, DurationMinutes(dwell_time / 60))
 
     def time_per_chamber(
-        self, analysis_start_time: float, analysis_end_time: float
-    ) -> Dict[str, int]:
-        chamber_times = defaultdict(lambda: 0)
+        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
+    ) -> Dict[ChamberName, DurationSeconds]:
+        chamber_times : Dict[ChamberName, DurationSeconds] = defaultdict[ChamberName, DurationSeconds](lambda: DurationSeconds(0))
         for d in self.dwells:
             start = max(d.start, analysis_start_time)
             end = min(d.end, analysis_end_time)
             if end > start:
-                chamber_times[d.chamber] += end - start
+                chamber_times[d.chamber] = DurationSeconds(chamber_times[d.chamber] + (end - start))
         return chamber_times
 
     def get_locations_between(
-        self, analysis_start_time: float, analysis_end_time: float
+        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
     ) -> List[str]:
         chambers = []
         for d in self.dwells:
@@ -276,7 +278,7 @@ class _AnimalTrajectory:
         return chambers
 
     def count_traversals_between(
-        self, analysis_start_time: float, analysis_end_time: float
+        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
     ) -> int:
         count = 0
         for d in self.dwells:
@@ -295,9 +297,9 @@ class AllAnimalTrajectories:
 
     def __init__(
         self,
-        start_time: float,
-        tag_id_to_start_chamber: Dict[str, str],
-        reads_per_animal: Dict[int, List[Read]],
+        start_time: TimestampSeconds,
+        tag_id_to_start_chamber: Dict[TagID, ChamberName],
+        reads_per_animal: Dict[TagID, List[Read]],
     ):
         self.animalTrajectories = {
             tag_id: _AnimalTrajectory(tag_id, initialChamber, start_time)
@@ -306,7 +308,10 @@ class AllAnimalTrajectories:
         fate_counts = {member: 0 for fate, member in ReadFate.__members__.items()}
         end_time = max([reads[-1].timestamp for reads in reads_per_animal.values()])
         for [tag_id, reads] in reads_per_animal.items():
+            if len(reads) == 0:
+                continue
             animalTrajectory = self.animalTrajectories[tag_id]
+            last_read: Read = reads[0]
             for read in reads:
                 fate = animalTrajectory.update_from_read(read)
                 fate_counts[fate] += 1
@@ -319,10 +324,10 @@ class AllAnimalTrajectories:
             key.name: "{:>8} ({:>6.2%})".format(value, value / count)
             for key, value in fate_counts.items()
         }
-        print("\nRead Interpretations:")
-        print("-----------------------------")
-        for [key, value] in fate_percent.items():
-            print("{:>10}: {}".format(key, value))
+        # print("\nRead Interpretations:")
+        # print("-----------------------------")
+        # for [key, value] in fate_percent.items():
+        #     print("{:>10}: {}".format(key, value))
 
     def traversals(self) -> Generator[Traversal, None, None]:
         """
@@ -353,5 +358,5 @@ class AllAnimalTrajectories:
                 del peeks[next_tag_id]
             yield result
 
-    def get_locations_between(self, tag_id: str, start: float, end: float) -> List[str]:
+    def get_locations_between(self, tag_id: TagID, start: TimestampSeconds, end: TimestampSeconds) -> List[str]:
         return self.animalTrajectories[tag_id].get_locations_between(start, end)

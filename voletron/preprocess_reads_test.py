@@ -19,18 +19,18 @@ from unittest.mock import MagicMock, call
 from voletron.parse_olcus import parse_raw_line
 from voletron.preprocess_reads import _parsimonious_reads, _spaced_reads
 from voletron.co_dwell_accumulator import Chamber, CoDwellAccumulator
-from voletron.structs import Antenna, Dwell, Read, Traversal
+from voletron.types import Antenna, Dwell, Read, Traversal, TagID, TimestampSeconds, ChamberName, AnimalName
 
 
 class TestPreprocessReads(unittest.TestCase):
     def test_spaced_reads(self):
         reads = [
-            Read("tag_a", 200, Antenna("Tube2", "ArenaA")),
-            Read("tag_a", 210, Antenna("Tube2", "Cage2")),
-            Read("tag_a", 210.001, Antenna("Tube2", "Cage2")),
-            Read("tag_a", 210.002, Antenna("Tube2", "ArenaA")),
-            Read("tag_a", 300, Antenna("Tube4", "ArenaA")),
-            Read("tag_a", 300.001, Antenna("Tube4", "Cage4")),
+            Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
+            Read(TagID("tag_a"), TimestampSeconds(210), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
+            Read(TagID("tag_a"), TimestampSeconds(210.001), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
+            Read(TagID("tag_a"), TimestampSeconds(210.002), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
+            Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube4"), ChamberName("CentralA"))),
+            Read(TagID("tag_a"), TimestampSeconds(300.001), Antenna(ChamberName("Tube4"), ChamberName("Cage4"))),
         ]
         # mutating
         _spaced_reads(reads)
@@ -38,42 +38,42 @@ class TestPreprocessReads(unittest.TestCase):
         self.assertEqual(
             reads,
             [
-                Read("tag_a", 200, Antenna("Tube2", "ArenaA")),
-                Read("tag_a", 210, Antenna("Tube2", "Cage2")),
-                Read("tag_a", 210.002, Antenna("Tube2", "Cage2")),
-                Read("tag_a", 210.004, Antenna("Tube2", "ArenaA")),
-                Read("tag_a", 300, Antenna("Tube4", "ArenaA")),
-                Read("tag_a", 300.002, Antenna("Tube4", "Cage4")),
+                Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
+                Read(TagID("tag_a"), TimestampSeconds(210), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
+                Read(TagID("tag_a"), TimestampSeconds(210.002), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
+                Read(TagID("tag_a"), TimestampSeconds(210.004), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
+                Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube4"), ChamberName("CentralA"))),
+                Read(TagID("tag_a"), TimestampSeconds(300.002), Antenna(ChamberName("Tube4"), ChamberName("Cage4"))),
             ],
         )
 
     def test_parsimonious_reads(self):
         reads = [
-            Read("tag_a", 200, Antenna("Tube2", "ArenaA")),
-            Read("tag_a", 210, Antenna("Tube2", "Cage2")),
+            Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
+            Read(TagID("tag_a"), TimestampSeconds(210), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
             # these two reversed!
-            Read("tag_a", 210.002, Antenna("Tube2", "ArenaA")),
-            Read("tag_a", 210.004, Antenna("Tube2", "Cage2")),
+            Read(TagID("tag_a"), TimestampSeconds(210.002), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
+            Read(TagID("tag_a"), TimestampSeconds(210.004), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
             ##
-            Read("tag_a", 300, Antenna("Tube4", "ArenaA")),
-            Read("tag_a", 300.002, Antenna("Tube4", "Cage4")),
+            Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube4"), ChamberName("CentralA"))),
+            Read(TagID("tag_a"), TimestampSeconds(300.002), Antenna(ChamberName("Tube4"), ChamberName("Cage4"))),
         ]
-        tag_id_to_name = {"tag_a": "Animal A"}
+        tag_id_to_name = {TagID("tag_a"): AnimalName("Animal A")}
 
         # mutating
-        _parsimonious_reads("tag_a", reads, tag_id_to_name)
+        _parsimonious_reads(TagID("tag_a"), reads, tag_id_to_name)
 
         self.assertEqual(
             reads,
             [
-                Read("tag_a", 200, Antenna("Tube2", "ArenaA")),
-                Read("tag_a", 210, Antenna("Tube2", "Cage2")),
+                Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
+                Read(TagID("tag_a"), TimestampSeconds(210), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
                 # fixed
-                Read("tag_a", 210.002, Antenna("Tube2", "Cage2")),
-                Read("tag_a", 210.004, Antenna("Tube2", "ArenaA")),
+                Read(TagID("tag_a"), TimestampSeconds(210.002), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))),
+                Read(TagID("tag_a"), TimestampSeconds(210.004), Antenna(ChamberName("Tube2"), ChamberName("CentralA"))),
                 ##
-                Read("tag_a", 300, Antenna("Tube4", "ArenaA")),
-                Read("tag_a", 300.002, Antenna("Tube4", "Cage4")),
+                Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube4"), ChamberName("CentralA"))),
+                Read(TagID("tag_a"), TimestampSeconds(300.002), Antenna(ChamberName("Tube4"), ChamberName("Cage4"))),
             ],
         )
 

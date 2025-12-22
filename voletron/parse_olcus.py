@@ -17,14 +17,16 @@ import datetime
 import glob
 import os
 import sys
-from typing import Generator, Union
+from typing import Generator, NewType, Optional, Union
 from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
 from voletron.apparatus_config import olcus_id_to_antenna_hardcode
-from voletron.structs import Antenna, Config, Read
+from voletron.types import Antenna, Config, Read, TagID, TimestampSeconds
 
+OlcusDeviceID = NewType('OlcusDeviceID', int)
+OlcusAntennaID = NewType('OlcusAntennaID', int)
 
-def olcus_id_to_antenna(device_id: int, antenna_id: int):
+def olcus_id_to_antenna(device_id: OlcusDeviceID, antenna_id: OlcusAntennaID) -> Antenna:
     """Map the Olcus ID--the (device_id, antenna_id pair) to an Antenna object.
 
     Returns: The Antenna corresponding to the given Olcus ID.
@@ -32,7 +34,7 @@ def olcus_id_to_antenna(device_id: int, antenna_id: int):
     return olcus_id_to_antenna_hardcode[device_id][antenna_id]
 
 
-def parse_raw_line(line: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Read:
+def parse_raw_line(line: str, timezone: datetime.tzinfo) -> Optional[Read]:
     """Parse a line of the "raw" format, producing a Read object.
 
     Args:
@@ -46,15 +48,16 @@ def parse_raw_line(line: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Read:
     del can_timestamp
     if not tag_id:
         return None
-    antenna = olcus_id_to_antenna(int(device_id), int(antenna_id))
+    antenna = olcus_id_to_antenna(OlcusDeviceID(int(device_id)), OlcusAntennaID(int(antenna_id)))
 
     # The time given in the Olcus file is the *local* time.  No time zone is given.
     dt = datetime.datetime.strptime(date_timestamp, "%d.%m.%Y %H:%M:%S:%f")
-    dt = timezone.localize(dt)
-    return Read(tag_id, dt.timestamp(), antenna)
+    if isinstance(timezone, (StaticTzInfo, DstTzInfo)):
+        dt = timezone.localize(dt)
+    return Read(TagID(tag_id), TimestampSeconds(dt.timestamp()), antenna)
 
 
-def parse_raw_file(filename: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Generator[Read, None, None]:
+def parse_raw_file(filename: str, timezone: datetime.tzinfo) -> Generator[Read, None, None]:
     """Parse a raw input file, producing a stream of Read objects.
 
     Args:
@@ -72,7 +75,7 @@ def parse_raw_file(filename: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> G
                 yield read
 
 
-def parse_first_read(dirname: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Read:
+def parse_first_read(dirname: str, timezone: datetime.tzinfo) -> Read:
     """Obtain the first read from the first raw file in a directory.
     Args:
         dirname: The directory name from which to read.
@@ -91,7 +94,7 @@ def parse_first_read(dirname: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> 
     return read
 
 
-def parse_raw_dir(dirname: str, timezone: Union[StaticTzInfo, DstTzInfo]) -> Generator[Read, None, None]:
+def parse_raw_dir(dirname: str, timezone: datetime.tzinfo) -> Generator[Read, None, None]:
     """Parse raw files in a directory in order, producing a stream of Reads.
 
     Args:

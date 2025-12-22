@@ -34,11 +34,11 @@ from voletron.output import (
 from voletron.parse_config import parse_config, parse_validation
 from voletron.parse_olcus import parse_first_read, parse_raw_dir
 from voletron.preprocess_reads import preprocess_reads
-from voletron.co_dwell_accumulator import CoDwellAccumulator, TimeSpanAnalyzer
+from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
 from voletron.validate import write_validation
-from voletron.structs import Config, Validation
+from voletron.types import Config, TimestampSeconds, Validation
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 
 
@@ -82,9 +82,9 @@ def _parse_args(argv):
         default=1800
     )
     parser.add_argument(
-        "--arena_time_offset_seconds",
+        "--habitat_time_offset_seconds",
         type=int,
-        help="Seconds after the first tag read when the 'time in arena' clock "
+        help="Seconds after the first tag read when the 'time in habitat' clock "
         "is considered to begin, for purposes of activity time series "
         "reporting.  Default: 600",
         default=600
@@ -103,20 +103,21 @@ def _parse_args(argv):
     return parser.parse_args()
 
 
-def _parse_config(args) -> tuple[Config, list[Validation], str]:
+def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
     configFiles = glob.glob(os.path.join(args.olcusDir, "*_[Cc]onfig.csv"))
     if len(configFiles) != 1:
         raise ValueError("Could not find exactly one `*_Config.csv` file.")
 
     config = parse_config(configFiles[0])
 
+    validations: list[Validation] = []
     if args.validation:
         validationFiles = glob.glob(os.path.join(args.olcusDir, "*_[Vv]alidation.csv"))
         if len(configFiles) != 1:
             raise ValueError("Could not find exactly one `*_Validation.csv` file.")
 
         validations = parse_validation(
-            validationFiles[0], {v: k for (k, v) in config.tag_id_to_name.items()}
+            validationFiles[0], {v: k for (k, v) in config.tag_id_to_name.items()}, timezone
         )
 
     olcusDir = os.path.normpath(args.olcusDir)
@@ -138,11 +139,11 @@ def main(argv):
     ### Parse command-line arguments
 
     args = _parse_args(argv)
-    timezone = pytz.timezone(args.timezone)
+    timezone : datetime.tzinfo = pytz.timezone(args.timezone)
 
     ### Read input config and validation files
 
-    (config, validations, olcusDir) = _parse_config(args)
+    (config, validations, olcusDir) = _parse_config(args, timezone)
 
     ### Read raw data
 
@@ -152,11 +153,11 @@ def main(argv):
 
     # The first read may require inserting a missing read before it;
     # start the experiment 5 ms earlier to account for this.
-    first_read_time: float = parse_first_read(args.olcusDir, timezone).timestamp - 0.005
+    first_read_time: TimestampSeconds = TimestampSeconds(parse_first_read(args.olcusDir, timezone).timestamp - 0.005)
     if args.start != None:
-        analysis_start_time = timezone.localize(datetime.datetime.strptime(
+        analysis_start_time = TimestampSeconds(timezone.localize(datetime.datetime.strptime(
             args.start, "%d.%m.%Y %H:%M:%S:%f"
-        )).timestamp()
+        )).timestamp())
     else:
         analysis_start_time = first_read_time
 
@@ -175,9 +176,9 @@ def main(argv):
 
     last_read_time = max([vv[-1].timestamp for vv in reads_per_animal.values()])
     if args.end != None:
-        analysis_end_time = timezone.localize(datetime.datetime.strptime(
+        analysis_end_time = TimestampSeconds(timezone.localize(datetime.datetime.strptime(
             args.end, "%d.%m.%Y %H:%M:%S:%f"
-        )).timestamp()
+        )).timestamp())
     else:
         analysis_end_time = last_read_time
 
@@ -268,10 +269,10 @@ def main(argv):
         write_activity(
             out_dir,
             exp_name,
-            "arena_time",
+            "habitat_time",
             trajectories,
             co_dwells,
-            first_read_time + args.arena_time_offset_seconds,
+            first_read_time + args.habitat_time_offset_seconds,
             last_read_time,
             args.bin_seconds,
         )

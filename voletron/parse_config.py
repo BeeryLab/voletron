@@ -17,7 +17,7 @@ import datetime
 from typing import Dict, Union
 from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
-from voletron.structs import Antenna, Config, Read, Validation
+from voletron.types import AnimalName, Antenna, ChamberName, Config, Read, TagID, TimestampSeconds, Validation
 
 
 def parse_config(filename: str) -> Config:
@@ -44,7 +44,7 @@ def parse_config(filename: str) -> Config:
     return Config(tag_id_to_name, tag_id_to_start_chamber)
 
 
-def parse_validation(filename: str, name_to_tag_id: Dict[str, str], timezone: Union[StaticTzInfo, DstTzInfo]) -> list[Validation]:
+def parse_validation(filename: str, name_to_tag_id: Dict[AnimalName, TagID], timezone: Union[StaticTzInfo, DstTzInfo]) -> list[Validation]:
     """Parse a run validation file.
 
     The file must have a header line such as:
@@ -65,11 +65,11 @@ def parse_validation(filename: str, name_to_tag_id: Dict[str, str], timezone: Un
                 continue
             (time_str, animalid, chamber) = [x.strip() for x in line.split(",")]
             try:
-                tag_id = name_to_tag_id[animalid]
-                timestamp = timezone.localize(datetime.datetime.strptime(
+                tag_id = name_to_tag_id[AnimalName(animalid)]
+                timestamp = TimestampSeconds(timezone.localize(datetime.datetime.strptime(
                     time_str, "%d.%m.%Y %H:%M"
-                )).timestamp()
-                result.append(Validation(timestamp, tag_id, chamber))
+                )).timestamp())
+                result.append(Validation(timestamp, tag_id, ChamberName(chamber)))
                 # TODO: validate chamber matches apparatus_config
             except KeyError:
                 print("Validation config contains unknown animal: {}".format(animalid))

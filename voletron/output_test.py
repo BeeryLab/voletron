@@ -21,29 +21,29 @@ from unittest.mock import MagicMock
 from voletron.output import write_group_sizes
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.structs import Traversal
+from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Traversal
 
 # TODO write all the tests
 
 
 class TestOutput(unittest.TestCase):
     def test_group_sizes_nosolo_never(self):
-        tag_ids = ['foo', 'bar']
+        tag_ids = [TagID('foo'), TagID('bar')]
         out_dir = tempfile.mkdtemp()
         exp_name = "test"
-        analysis_start_time = 100
-        analysis_end_time = 200
-        tag_id_to_name = {'foo': 'foo_name', 'bar': 'bar_name'}
-        tag_id_to_start_chamber = {'foo': 'chamber_1', 'bar': 'chamber_2'}
+        analysis_start_time = TimestampSeconds(100)
+        analysis_end_time = TimestampSeconds(200)
+        tag_id_to_name = {TagID('foo'): AnimalName('foo_name'), TagID('bar'): AnimalName('bar_name')}
+        tag_id_to_start_chamber : dict[TagID, ChamberName] = {TagID('foo'): ChamberName('chamber_1'), TagID('bar'): ChamberName('chamber_2')}
 
         # Animals foo and bar start in chambers 1 and 2, and never move, so
         # they're always alone.
         traversals = [] #[Traversal(10, 'foo', 'chamber_1', 'chamber_1')]
 
-        state = CoDwellAccumulator(analysis_start_time, tag_id_to_start_chamber, ["chamber_1", "chamber_2"])
+        state = CoDwellAccumulator(analysis_start_time, tag_id_to_start_chamber, [ChamberName("chamber_1"), ChamberName("chamber_2")])
         for t in traversals:
             state.update_state_from_traversal(t)
-        co_dwells = state.end(300)
+        co_dwells = state.end(TimestampSeconds(300))
         analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
 
         write_group_sizes(

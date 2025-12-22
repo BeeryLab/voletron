@@ -14,12 +14,12 @@
 
 
 from typing import Dict, Iterable, List
-from voletron.structs import Read, chamberBetween
+from voletron.types import AnimalName, Read, TagID, TimestampSeconds, chamberBetween
 
 
 def preprocess_reads(
-    reads: Iterable[Read], tag_ids: Iterable[int], tag_id_to_name: Dict[int, str]
-) -> Dict[int, List[Read]]:
+    reads: Iterable[Read], tag_ids: Iterable[TagID], tag_id_to_name: Dict[TagID, AnimalName]
+) -> Dict[TagID, List[Read]]:
     # Normalize the reads per animal by spacing them out in time a bit and
     # swapping the order of nearly-simultaneous reads for increased parsimony.
     reads_per_animal = split_reads_per_animal(reads, tag_ids)
@@ -34,8 +34,8 @@ def preprocess_reads(
 
 
 def split_reads_per_animal(
-    reads: Iterable[Read], tag_ids: Iterable[int]
-) -> Dict[int, List[Read]]:
+    reads: Iterable[Read], tag_ids: Iterable[TagID]
+) -> Dict[TagID, List[Read]]:
     result = {tag_id: [] for tag_id in tag_ids}
     for read in reads:
         try:
@@ -45,7 +45,7 @@ def split_reads_per_animal(
     return result
 
 
-def _spaced_reads(reads: Iterable[Read]) -> None:
+def _spaced_reads(reads: List[Read]) -> None:
     """Space out nearly-simultaneous reads slightly in time.
 
     Mutates the provided `reads`.
@@ -63,7 +63,7 @@ def _spaced_reads(reads: Iterable[Read]) -> None:
         b_orig = b.timestamp
 
         if abs(b.timestamp - a.timestamp) < 0.002:
-            b_new = ((a.timestamp * 1000) + 2) / 1000  # float precision shenanigans
+            b_new = TimestampSeconds(((a.timestamp * 1000) + 2) / 1000)  # float precision shenanigans
             b = Read(b.tag_id, b_new, b.antenna)
             reads[i + 1] = b
             jitter = b_new - b_orig
@@ -73,7 +73,7 @@ def _spaced_reads(reads: Iterable[Read]) -> None:
 
 
 def _parsimonious_reads(
-    tag_id: int, reads: Iterable[Read], tag_id_to_name: Dict[int, str]
+    tag_id: TagID, reads: List[Read], tag_id_to_name: Dict[TagID, AnimalName]
 ) -> None:
     """Swap the order of nearly-simultaneous reads when it makes sense.
 
@@ -110,4 +110,4 @@ def _parsimonious_reads(
                     b_later = Read(b.tag_id, c.timestamp, b.antenna)
                     reads[i : i + 4] = [a, c_earlier, b_later, d]
 
-    print("Parsimony swaps: {} {}".format(tag_id_to_name[tag_id], count))
+    # print("Parsimony swaps: {} {}".format(tag_id_to_name[tag_id], count))

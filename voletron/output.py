@@ -18,7 +18,7 @@ import math
 from collections import defaultdict
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 from voletron.trajectory import AllAnimalTrajectories
-from voletron.structs import Config, CoDwell
+from voletron.types import AnimalName, ChamberName, Config, CoDwell, DurationSeconds, TagID, TimestampSeconds
 
 from voletron.util import format_time
 
@@ -31,12 +31,13 @@ def write_pair_inclusive_cohabs(
     with open(os.path.join(out_dir, exp_name + ".pair-inclusive.cohab.csv"), "w") as f:
         f.write("Animal A,Animal B,dwells,seconds,test_duration\n")
         for codwell_aggregate in analyzer.get_pair_inclusive_stats():
+            animal_a, animal_b = codwell_aggregate.tag_ids
             f.write(
                 "{},{},{},{:.0f},{:.0f}\n".format(
-                    config.tag_id_to_name[codwell_aggregate.animal_a],
-                    config.tag_id_to_name[codwell_aggregate.animal_b],
+                    config.tag_id_to_name[animal_a],
+                    config.tag_id_to_name[animal_b],
                     codwell_aggregate.count,
-                    codwell_aggregate.duration,
+                    codwell_aggregate.duration_seconds,
                     analyzer.duration,
                 )
             )
@@ -74,48 +75,40 @@ def write_pair_inclusive_cohabs(
 
 
 def write_group_chamber_cohabs(
-    tag_ids: List[str],
+    tag_ids: List[TagID],
     out_dir: str,
     exp_name: str,
     analyzer: TimeSpanAnalyzer,
-    tag_id_to_name: Dict[str, str],
+    tag_id_to_name: Dict[TagID, AnimalName],
 ):
     with open(os.path.join(out_dir, exp_name + ".group_chamber_cohab.csv"), "w") as f:
         f.write("animals,chamber,dwells,seconds,test_duration\n")
-        for (
-            group,
-            chamber_seconds,
-        ) in analyzer.get_group_chamber_exclusive_durations().items():
-            if group == "":
+        for group_dwell_aggregate in analyzer.get_group_chamber_exclusive_durations():
+            # Skip groups with tag_ids not in the requested list
+            if not all(tag_id in tag_ids for tag_id in group_dwell_aggregate.tag_ids):
                 continue
-            for (chamber, seconds) in chamber_seconds.items():
-                group_tag_ids = group.split(" ")
 
-                # ignore any tag_ids that were not explicitly requested
-                bad = False
-                for tag_id in group_tag_ids:
-                    if tag_id not in tag_ids:
-                        bad = True
-                if bad:
-                    continue
-
-                names = sorted(map(lambda x: tag_id_to_name[x], group_tag_ids))
-                f.write(
-                    "{},{},{:.0f},{:.0f}\n".format(
-                        " ".join(names), chamber, seconds, analyzer.duration
-                    )
+            names = sorted(tag_id_to_name[tag_id] for tag_id in group_dwell_aggregate.tag_ids)
+            f.write(
+                "{},{},{},{:.0f},{:.0f}\n".format(
+                    " ".join(names),
+                    group_dwell_aggregate.chamber,
+                    group_dwell_aggregate.count,
+                    group_dwell_aggregate.duration_seconds,
+                    analyzer.duration
                 )
+            )
 
 
 def write_chamber_times(
     config: Config,
-    tag_ids: List[str],
-    chambers: List[str],
+    tag_ids: List[TagID],
+    chambers: List[ChamberName],
     out_dir: str,
     exp_name: str,
     trajectories: AllAnimalTrajectories,
-    analysis_start_time: float,
-    analysis_end_time: float,
+    analysis_start_time: TimestampSeconds,
+    analysis_end_time: TimestampSeconds,
 ):
     with open(os.path.join(out_dir, exp_name + ".chambers.csv"), "w") as f:
         f.write("animal," + ",".join(chambers) + ",total\n")
@@ -138,28 +131,31 @@ def write_activity(
     boundary_type: str,
     trajectories: AllAnimalTrajectories,
     co_dwells: List[CoDwell],
-    analysis_start_time: float,
-    analysis_end_time: float,
-    bin_secs: int,
+    analysis_start_time: TimestampSeconds,
+    analysis_end_time: TimestampSeconds,
+    bin_secs: DurationSeconds,
 ):
     with open(os.path.join(out_dir, f"{exp_name}.activity.{boundary_type}.csv"), "w") as f:
         start = analysis_start_time
-        end = start + bin_secs
+        end = TimestampSeconds(start + bin_secs)
         while start < analysis_end_time:
             analyzer = TimeSpanAnalyzer(co_dwells, start, end)
             group_dwell_aggregates = analyzer.get_group_chamber_exclusive_durations()
 
-            # inefficient but so what
+            # inefficient but so what   
             for [tag_id, traj] in trajectories.animalTrajectories.items():
                 count = traj.count_traversals_between(start, end)
                 # lists of dwells for each group size 0, 1, 2, 3, 4
                 # 0 is impossible but we leave it in so that the list indexes match
-                dwells_by_group_size: List[List(float)] = [[], [], [], [], []]
+                dwells_by_group_size: List[List[DurationSeconds]] = [[], [], [], [], []]
                 for x in group_dwell_aggregates:
                     if tag_id in x.tag_ids:
                         dwells_by_group_size[len(x.tag_ids)].append(x.duration_seconds)
                 assert len(dwells_by_group_size[0]) == 0
-                avg_dwells_by_group_size = [math.avg(xx) for xx in dwells_by_group_size]
+                
+                avg_dwells_by_group_size = [
+                    sum(xx) / len(xx) if xx else 0.0 for xx in dwells_by_group_size
+                ]
 
                 f.write(
                     f"{start},{end},{bin_secs},{tag_id},"
@@ -169,19 +165,19 @@ def write_activity(
                     f"{avg_dwells_by_group_size[4]},"
                     f"{count}"
                 )
-            start += bin_secs
-            end += bin_secs
+            start = TimestampSeconds(start + bin_secs)
+            end = TimestampSeconds(end + bin_secs)
 
 
 def write_group_sizes(
-    tag_ids: List[str],
+    tag_ids: List[TagID],
     out_dir: str,
     exp_name: str,
     analyzer: TimeSpanAnalyzer,
-    tag_id_to_name: Dict[str, str],
+    tag_id_to_name: Dict[TagID, AnimalName],
 ):
     group_sizes = range(0, 9)
-    tag_id_group_size_seconds = defaultdict(lambda: [0] * 9)
+    tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = defaultdict[TagID, List[DurationSeconds]](lambda: [DurationSeconds(0)] * 9)
     with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "w") as f:
         f.write(
             "animal,"
@@ -193,7 +189,9 @@ def write_group_sizes(
                 if tag_id in tag_ids:
                     tag_id_group_size_seconds[tag_id][
                         len(group_dwell.tag_ids)
-                    ] += group_dwell.duration_seconds
+                    ] = DurationSeconds(tag_id_group_size_seconds[tag_id][
+                        len(group_dwell.tag_ids)
+                    ] + group_dwell.duration_seconds)
 
         # for (group, dwells, seconds) in analyzer.group_dwell_stats():
         #     group_tag_ids = group.split(" ")
@@ -262,7 +260,7 @@ def write_group_sizes(
 
 def write_long_dwells(
     config: Config,
-    tag_ids: List[str],
+    tag_ids: List[TagID],
     out_dir: str,
     exp_name: str,
     trajectories: AllAnimalTrajectories,

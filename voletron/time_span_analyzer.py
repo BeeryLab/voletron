@@ -14,21 +14,21 @@
 
 
 import sys
-from typing import Iterable, Dict
+from typing import Iterable, Dict, Optional
 
 # import .trajectory
 from collections import defaultdict
 from typing import Dict, List
 from voletron.util import seconds_between_timestamps
-from voletron.structs import CoDwell, GroupDwellAggregate
+from voletron.types import ChamberName, CoDwell, DurationSeconds, GroupDwellAggregate, GroupID, TagID, TimestampSeconds
 
 
 class TimeSpanAnalyzer:
     def __init__(
         self,
         co_dwells: List[CoDwell],
-        analysis_start_time: float,
-        analysis_end_time: float,
+        analysis_start_time: TimestampSeconds,
+        analysis_end_time: TimestampSeconds,
     ):
         # Note that the input CoDwells are "exclusive", i.e. an A+B+C CoDwell is
         # not also represented as an A+B CoDwell.
@@ -57,9 +57,9 @@ class TimeSpanAnalyzer:
         """Outputs dwell statistics for each group of animals in the "exclusive"
         sense, meaning that an A+B+C group dwell is *not* counted towards A+B,
         B+C, and A+C."""
-        dwells_by_group_and_chamber: Dict[str, Dict[str, list[CoDwell]]] = defaultdict(lambda: defaultdict(list))
+        dwells_by_group_and_chamber: Dict[GroupID, Dict[ChamberName, list[CoDwell]]] = defaultdict(lambda: defaultdict(list))
         for d in self.co_dwells:
-            group_id = " ".join(sorted(d.tag_ids))
+            group_id : GroupID = GroupID(" ".join(sorted(d.tag_ids)))
             dwells_by_group_and_chamber[group_id][d.chamber].append(d)
 
         # sum_by_group_and_chamber = defaultdict(lambda: defaultdict(int))
@@ -68,7 +68,7 @@ class TimeSpanAnalyzer:
             for (chamber, dwells) in chamber_dwells.items():
                 result.append(
                     GroupDwellAggregate(
-                        tag_ids=group_id.split(' '),  # a bit hacky
+                        tag_ids=list(map(GroupID, group_id.split(' '))),  # a bit hacky
                         chamber=chamber,
                         count=len(dwells),
                         duration_seconds=_durations_sum_seconds(dwells),
@@ -87,7 +87,7 @@ class TimeSpanAnalyzer:
         
         This aggregates over chambers.
         """
-        dwells_by_pair = defaultdict(lambda: defaultdict(list))
+        dwells_by_pair : Dict[TagID, Dict[TagID, List[CoDwell]]] = defaultdict(lambda: defaultdict(list))
         for d in self.co_dwells:
             # tag_a < tag_b lexicographically
             # Note that a dwell of >2 animals gets added to each contained pair
@@ -102,7 +102,7 @@ class TimeSpanAnalyzer:
                 result.append(
                     GroupDwellAggregate(
                         tag_ids=[tag_a, tag_b],
-                        chamber=None,
+                        chamber=ChamberName("All"),
                         count=len(dwells),
                         duration_seconds=_durations_sum_seconds(dwells),
                     )
@@ -195,21 +195,21 @@ class TimeSpanAnalyzer:
 
 
 def _restrict_co_dwell(
-    codwell: CoDwell, analysis_start_time: float, analysis_end_time: float
-) -> CoDwell:
+    codwell: CoDwell, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
+) -> Optional[CoDwell]:
     """Limit co-dwells to the analysis start-end interval."""
-    if not codwell.start or not analysis_start_time:
-        print(codwell.start, analysis_start_time, analysis_end_time)
-    start = max(codwell.start, analysis_start_time)
-    end = min(codwell.end, analysis_end_time)
+    # if not codwell.start or not analysis_start_time:
+    #     print(codwell.start, analysis_start_time, analysis_end_time)
+    start = TimestampSeconds(max(codwell.start, analysis_start_time))
+    end = TimestampSeconds(min(codwell.end, analysis_end_time))
     if end > start:
         return CoDwell(codwell.tag_ids, start, end, codwell.chamber)
     return None
 
 
-def _durations_sum_seconds(dwells: List[CoDwell]) -> float:
+def _durations_sum_seconds(dwells: List[CoDwell]) -> DurationSeconds:
     durations = [seconds_between_timestamps(cd.start, cd.end) for cd in dwells]
-    return sum(durations)  # [len(durations), sum(durations)]
+    return DurationSeconds(sum(durations))  # [len(durations), sum(durations)]
 
 
 # def _all_pairs(items: Iterable[T]) => List[Tuple[T, T]]:

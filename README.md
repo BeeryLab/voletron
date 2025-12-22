@@ -65,7 +65,7 @@ are formatted with 5 columns: `cantimestamp`, `datetimestamp`, `deviceid`,
 number. Antennas are indexed by the `deviceid` and `antennaID`.
 
 **Apparatus configuration**. The default apparatus configuration in
-[`apparatus_config.py`](voletron/apparatus_config.py_) describes 2 arena setups,
+[`apparatus_config.py`](voletron/apparatus_config.py_) describes 2 habitat setups,
 each with 4 side chambers arrayed around a central chamber. Ring antennas on the
 tubes connect the side-chambers to the central arenas. The mapping is scalable
 and flexible, but presumes two antennas per tube to define a side-chamber end
@@ -90,7 +90,7 @@ found.
 ## Inference logic
 
 When pit tags are detected at locations that are inconsistent with possible
-transitions through the arena (e.g. skipping an antenna between two others), the
+transitions through the central arena (e.g. skipping an antenna between two others), the
 location is interpolated. The default interpolation logic is: [TODO: describe]
 
 ## Contributing
@@ -126,7 +126,7 @@ Version 2.0
 - TODO: more tests
 
 
-1. Output file that sums seconds of cohab between voles in a specific chamber. Include all groupings from group cohab file (vole A+B, A+C, A+D, A+B+C, A+B+D, A+C+D, A+B+C+D etc.) for each chamber (arena, cage 1,2,3,4). Include dwells and seconds. (Home cage analysis)
+1. Output file that sums seconds of cohab between voles in a specific chamber. Include all groupings from group cohab file (vole A+B, A+C, A+D, A+B+C, A+B+D, A+C+D, A+B+C+D etc.) for each chamber (central arena, cage 1,2,3,4). Include dwells and seconds. (Home cage analysis)
 Outputs: See attached Sheet 1. 
 
 2. Activity-I think you're already working on this, but bin transitions by 5 min increments by clock time. I'm less sure of how this output looks, so feel free to change. Could bump increments up to 10 mins. (Activity/Rhythms analysis)

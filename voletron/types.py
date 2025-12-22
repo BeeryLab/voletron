@@ -13,35 +13,55 @@
 # limitations under the License.
 
 
-from typing import List, NamedTuple
+from typing import Dict, List, NamedTuple, NewType, Optional
+
+TagID = NewType('TagID', str)
+
+GroupID = NewType('GroupID', str)
+
+AnimalName = NewType('AnimalName', str)
+
+HabitatName = NewType('HabitatName', str)
+
+ChamberName = NewType('ChamberName', str)
+
+CHAMBER_OUTSIDE = ChamberName("Outside")
+
+CHAMBER_ERROR = ChamberName("Error")
+
+TimestampSeconds = NewType('TimestampSeconds', float)
+
+DurationSeconds = NewType('DurationSeconds', float)
+
+DurationMinutes = NewType('DurationMinutes', float)
 
 # An antenna placed in a tube, near where that tube connects to a given cage.
 # Tubes and cages are identified by string IDs.
-Antenna = NamedTuple("Antenna", [("tube", str), ("cage", str)])
+Antenna = NamedTuple("Antenna", [("tube", ChamberName), ("cage", ChamberName)])
 
 # One observation of a tag by an antenna.
-Read = NamedTuple("Read", [("tag_id", str), ("timestamp", int), ("antenna", Antenna)])
+Read = NamedTuple("Read", [("tag_id", TagID), ("timestamp", TimestampSeconds), ("antenna", Antenna)])
 
 # One validation event, when an animal was observed by a human to be in a certain chamber.
+# Timestamps are in seconds since the epoch.
 Validation = NamedTuple(
-    "Validation", [("timestamp", int), ("tag_id", str), ("chamber", str)]
+    "Validation", [("timestamp", TimestampSeconds), ("tag_id", TagID), ("chamber", ChamberName)]
 )
 
 # One timespan of presence of an animal in a given chamber.  The animal ID is
 # not given, because these records are used only within an AnimalTrajectory.
 # `start` and `end` are timestamps.  `chamber` is the string ID of the tube or
 # cage where the animal stayed during this time.
-Dwell = NamedTuple("Dwell", [("start", int), ("end", int), ("chamber", str)])
+Dwell = NamedTuple("Dwell", [("start", TimestampSeconds), ("end", TimestampSeconds), ("chamber", ChamberName)])
 
 # Describes pairs or groups of animals together in a given chamber during a
 # given time span.
-CoDwell = NamedTuple("CoDwell", [("tag_ids", List[str]), ("start", int), ("end", int), ("chamber", str)])
-
+CoDwell = NamedTuple("CoDwell", [("tag_ids", List[TagID]), ("start", TimestampSeconds), ("end", TimestampSeconds), ("chamber", ChamberName)])
 # An instance of an animal staying put for a very long time, which likely
 # indicates an error of some kind.
 LongDwell = NamedTuple(
     "LongDwell",
-    [("tag_id", str), ("chamber", str), ("start_time", int), ("minutes", int)],
+    [("tag_id", TagID), ("chamber", ChamberName), ("start_time", TimestampSeconds), ("minutes", DurationMinutes)],
 )
 
 # One instance of an animal crossing from one chamber (tube or cage) to another.
@@ -49,12 +69,12 @@ LongDwell = NamedTuple(
 # known.  `orig` and `dest` are string IDs of chambers (tubes or cages)-- the
 # origin and the destination, respectively.
 Traversal = NamedTuple(
-    "Traversal", [("timestamp", int), ("tag_id", str), ("orig", str), ("dest", str)]
+    "Traversal", [("timestamp", TimestampSeconds), ("tag_id", TagID), ("orig", ChamberName), ("dest", ChamberName)]
 )
 
 # The configuration for this run, mapping tag IDs to animal names and start chambers.
 Config = NamedTuple(
-    "Config", [("tag_id_to_name", dict), ("tag_id_to_start_chamber", dict)]
+    "Config", [("tag_id_to_name", Dict[TagID, AnimalName]), ("tag_id_to_start_chamber", Dict[TagID, ChamberName])]
 )
 
 # Aggregate statistics for the presence of two animals in the same chamber.
@@ -70,10 +90,10 @@ Config = NamedTuple(
 
 GroupDwellAggregate = NamedTuple(
     "GroupDwellAggregate",
-    [("tag_ids", List[str]), ("chamber", str), ("count", int), ("duration_seconds", float)],
+    [("tag_ids", List[TagID]), ("chamber", ChamberName), ("count", int), ("duration_seconds", DurationSeconds)],
 )
 
-def chamberBetween(antennaA: Antenna, antennaB: Antenna):
+def chamberBetween(antennaA: Antenna, antennaB: Antenna) -> Optional[ChamberName]:
     """Determine which chamber is between two Antennae."""
     if antennaA == antennaB:
         raise ValueError("There is no chamber between an antenna and itself")

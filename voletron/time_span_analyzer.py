@@ -52,7 +52,6 @@ class TimeSpanAnalyzer:
             if x
         ]
 
-    # TODO(soergel): refactor to output a list of GroupDwellAggregate
     def get_group_chamber_exclusive_durations(self) -> List[GroupDwellAggregate]:
         """Outputs dwell statistics for each group of animals in the "exclusive"
         sense, meaning that an A+B+C group dwell is *not* counted towards A+B,

@@ -13,31 +13,23 @@
 # limitations under the License.
 
 import argparse
-from cmath import exp
 import datetime
 import glob
 import os
 import sys
 import pytz
 
+from voletron.output.output import write_outputs
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from voletron.apparatus_config import apparatus_chambers, all_chambers
-from voletron.output import (
-    write_activity,
-    write_chamber_times,
-    write_pair_inclusive_cohabs,
-    write_group_chamber_cohabs,
-    write_group_sizes,
-    write_long_dwells,
-)
+from voletron.apparatus_config import all_chambers
 from voletron.parse_config import parse_config, parse_validation
 from voletron.parse_olcus import parse_first_read, parse_raw_dir
 from voletron.preprocess_reads import preprocess_reads
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
-from voletron.validate import write_validation
 from voletron.types import Config, TimestampSeconds, Validation
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 
@@ -131,42 +123,92 @@ def main(argv):
     co-hab duration for each pair of animals."""
 
     print("\n===================================")
-    print("Voletron v0.2, 2022-08-14")
+    print("Voletron v2.0, 2025-12-21")
     print("http://github.com/beerylab/voletron")
     print("===================================")
     print("")
-
-    ### Parse command-line arguments
 
     args = _parse_args(argv)
     timezone : datetime.tzinfo = pytz.timezone(args.timezone)
 
     ### Read input config and validation files
-
-    (config, validations, olcusDir) = _parse_config(args, timezone)
-
+    config, validations, olcusDir = _parse_config(args, timezone)
+    
     ### Read raw data
+    reads_per_animal, first_read_time, analysis_start_time, analysis_end_time, last_read_time = _load_and_validate_data(args, config, olcusDir, timezone)
+    
+    ### Infer animal trajectories from antenna reads
+    trajectories = _build_trajectories(first_read_time, config, reads_per_animal)
+    
+    # Simulate state forwards, accumulating stats in the state object
+    # and write it out along the way
+    state = CoDwellAccumulator(first_read_time, config.tag_id_to_start_chamber, all_chambers)
+    for t in trajectories.traversals():
+        state.update_state_from_traversal(t)
+    co_dwells = state.end(analysis_end_time)
+    
+    # Slice out the time span of interest for analysis
+    # TODO(soergel): bins here
+    analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
+    
+    write_outputs(
+        olcusDir,
+        config,
+        trajectories,
+        co_dwells,
+        analyzer,
+        first_read_time,
+        last_read_time,
+        analysis_start_time,
+        analysis_end_time,
+        validations,
+        args.validation,
+        args.bin_seconds,
+        args.habitat_time_offset_seconds,
+    )
 
+
+def _load_and_validate_data(args, config, olcusDir, timezone):
+    """Load raw data, handle preprocessing, and determine time intervals."""
     print("\nReading Data:")
     print("-----------------------------")
     reads = parse_raw_dir(olcusDir, timezone)
-
+    
     # The first read may require inserting a missing read before it;
     # start the experiment 5 ms earlier to account for this.
     first_read_time: TimestampSeconds = TimestampSeconds(parse_first_read(args.olcusDir, timezone).timestamp - 0.005)
+    analysis_start_time = _get_analysis_start_time(args, timezone, first_read_time)
+    
+    ### Initial cleanup of the reads, per animal
+    reads_per_animal = preprocess_reads(reads, config.tag_id_to_start_chamber.keys(), config.tag_id_to_name)
+    
+    _warn_unobserved_animals(reads_per_animal)
+    
+    last_read_time = max([vv[-1].timestamp for vv in reads_per_animal.values()])
+    analysis_end_time = _get_analysis_end_time(args, timezone, last_read_time)
+    
+    _print_time_intervals(first_read_time, analysis_start_time, analysis_end_time, last_read_time)
+    
+    return reads_per_animal, first_read_time, analysis_start_time, analysis_end_time, last_read_time
+
+
+def _get_analysis_start_time(args, timezone, first_read_time):
     if args.start != None:
-        analysis_start_time = TimestampSeconds(timezone.localize(datetime.datetime.strptime(
+        return TimestampSeconds(timezone.localize(datetime.datetime.strptime(
             args.start, "%d.%m.%Y %H:%M:%S:%f"
         )).timestamp())
-    else:
-        analysis_start_time = first_read_time
+    return first_read_time
 
-    ### Initial cleanup of the reads, per animal
 
-    reads_per_animal = preprocess_reads(
-        reads, config.tag_id_to_start_chamber.keys(), config.tag_id_to_name
-    )
+def _get_analysis_end_time(args, timezone, last_read_time):
+    if args.end != None:
+        return TimestampSeconds(timezone.localize(datetime.datetime.strptime(
+            args.end, "%d.%m.%Y %H:%M:%S:%f"
+        )).timestamp())
+    return last_read_time
 
+
+def _warn_unobserved_animals(reads_per_animal):
     unobserved_animals = [kk for (kk, vv) in reads_per_animal.items() if len(vv) == 0]
     if unobserved_animals:
         print("\n\n-----------------------------")
@@ -174,14 +216,8 @@ def main(argv):
         print(unobserved_animals)
         print("----------------------------\n\n")
 
-    last_read_time = max([vv[-1].timestamp for vv in reads_per_animal.values()])
-    if args.end != None:
-        analysis_end_time = TimestampSeconds(timezone.localize(datetime.datetime.strptime(
-            args.end, "%d.%m.%Y %H:%M:%S:%f"
-        )).timestamp())
-    else:
-        analysis_end_time = last_read_time
 
+def _print_time_intervals(first_read_time, analysis_start_time, analysis_end_time, last_read_time):
     print("\nIntervals:")
     print("-----------------------------")
     print("Experiment Start (first read): {}".format(format_time(first_read_time)))
@@ -189,118 +225,12 @@ def main(argv):
     print("                 Analysis End: {}".format(format_time(analysis_end_time)))
     print("   Experiment End (last read): {}".format(format_time(last_read_time)))
 
-    ### Infer animal trajectories from antenna reads
 
-    trajectories = AllAnimalTrajectories(
+def _build_trajectories(first_read_time, config, reads_per_animal):
+    """Build animal trajectories from preprocessed reads."""
+    return AllAnimalTrajectories(
         first_read_time, config.tag_id_to_start_chamber, reads_per_animal
     )
-
-    # all_chambers =  [item for sublist in apparatus_chambers.values() for item in sublist]
-    
-    # print("----CHAMBERS")
-    # print(all_chambers)
-    # print("----CHAMBERS")
-
-    # Simulate state forwards, accumulating stats in the state object
-    # and write it out along the way
-    state = CoDwellAccumulator(first_read_time, config.tag_id_to_start_chamber, all_chambers)
-    for t in trajectories.traversals():
-        state.update_state_from_traversal(t)
-    co_dwells = state.end(analysis_end_time)
-
-    # Slice out the time span of interest for analysis
-    # TODO(soergel): bins here
-    analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
-
-    # Output
-
-    exp_name = str(os.path.basename(olcusDir))
-
-    for (desired_start_chamber, chambers) in apparatus_chambers.items():
-
-        # Filter animals by apparatus
-        tag_ids = [
-            tag_id
-            for (tag_id, start_chamber) in config.tag_id_to_start_chamber.items()
-            if start_chamber == desired_start_chamber
-        ]
-
-        out_dir = os.path.join(olcusDir, "voletron_" + desired_start_chamber)
-        os.makedirs(out_dir)
-
-        # Trajectory-based outputs
-
-        if args.validation:
-            # Validation
-            write_validation(
-                tag_ids,
-                out_dir,
-                exp_name,
-                trajectories,
-                config.tag_id_to_name,
-                validations,
-            )
-
-        write_chamber_times(
-            config,
-            tag_ids,
-            chambers,
-            out_dir,
-            exp_name,
-            trajectories,
-            analysis_start_time,
-            analysis_end_time,
-        )
-
-        write_long_dwells(config, tag_ids, out_dir, exp_name, trajectories)
-        
-        # This one builds its own analyzer per bin
-        write_activity(
-            out_dir,
-            exp_name,
-            "wall_clock",
-            trajectories,
-            co_dwells,
-            analysis_start_time,
-            analysis_end_time,
-            args.bin_seconds,
-        )
-        
-        write_activity(
-            out_dir,
-            exp_name,
-            "habitat_time",
-            trajectories,
-            co_dwells,
-            first_read_time + args.habitat_time_offset_seconds,
-            last_read_time,
-            args.bin_seconds,
-        )
-
-        # TimeSpanAnalyzer-based outputs
-
-        write_pair_inclusive_cohabs(
-            config,
-            out_dir,
-            exp_name,
-            analyzer,
-        )
-
-        write_group_chamber_cohabs(
-            tag_ids,
-            out_dir,
-            exp_name,
-            analyzer,
-            config.tag_id_to_name,
-        )
-
-        write_group_sizes(
-            tag_ids,
-            out_dir,
-            exp_name,
-            analyzer,
-            config.tag_id_to_name,
-        )
 
 
 main(sys.argv)

@@ -71,8 +71,8 @@ def _parse_args(argv):
     parser.add_argument(
         "--bin_seconds",
         type=int,
-        help="Bin size, in seconds, for time-series outputs.  Default: 1800",
-        default=1800
+        help="Bin size, in seconds, for time-series outputs.  Default: 300",
+        default=300
     )
     parser.add_argument(
         "--habitat_time_offset_seconds",

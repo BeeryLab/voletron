@@ -30,6 +30,7 @@ def write_activity(
     bin_secs: DurationSeconds,
 ):
     with open(os.path.join(out_dir, f"{exp_name}.activity.{boundary_type}.csv"), "w") as f:
+        f.write("start_time,end_time,bin_seconds,tag_id,avg_dwell_size_1,avg_dwell_size_2,avg_dwell_size_3,avg_dwell_size_4,traversal_count\n")
         start = analysis_start_time
         end = TimestampSeconds(start + bin_secs)
         while start < analysis_end_time:

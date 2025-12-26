@@ -114,6 +114,16 @@ Version 2.0
 - Output cohab in tubes, not just in cages
 - Binned activity
 
+## Recently done (Kelley requests to validate)
+
+1. Output file that sums seconds of cohab between voles in a specific chamber. Include all groupings from group cohab file (vole A+B, A+C, A+D, A+B+C, A+B+D, A+C+D, A+B+C+D etc.) for each chamber (central arena, cage 1,2,3,4). Include dwells and seconds. (Home cage analysis)
+Outputs: See attached Sheet 1. 
+
+2. Activity-I think you're already working on this, but bin transitions by 5 min increments by clock time. I'm less sure of how this output looks, so feel free to change. Could bump increments up to 10 mins. (Activity/Rhythms analysis)
+Outputs: See attached Sheet 2
+
+
+
 ## Known Todos
 
 - TODO: Add log file, containing both the command line and the text currently
@@ -126,11 +136,9 @@ Version 2.0
 - TODO: more tests
 
 
-1. Output file that sums seconds of cohab between voles in a specific chamber. Include all groupings from group cohab file (vole A+B, A+C, A+D, A+B+C, A+B+D, A+C+D, A+B+C+D etc.) for each chamber (central arena, cage 1,2,3,4). Include dwells and seconds. (Home cage analysis)
-Outputs: See attached Sheet 1. 
 
-2. Activity-I think you're already working on this, but bin transitions by 5 min increments by clock time. I'm less sure of how this output looks, so feel free to change. Could bump increments up to 10 mins. (Activity/Rhythms analysis)
-Outputs: See attached Sheet 2
+
+
 
 3. Summary file/general thoughts on bins-is it possible to have two outputs here? Bins for one output by clock time in and the other by amount of time in arena? Is it also possible for me to change the borders for both outputs if needed during analysis? If not, can clock time be in 30 min intervals (12:00, 12:30, 13:00 etc.)  and time in arena be hourly (starting 10 mins after first tag read for 60 mins, 120 mins etc.).
 Outputs: See attached Sheet 3. Same output for time elapsed in arena.

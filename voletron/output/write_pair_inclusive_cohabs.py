@@ -14,22 +14,38 @@
 
 
 import os
+from typing import List
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 from voletron.types import Config
+from voletron.output.types import PairCohabRow
+
+def compute_pair_inclusive_cohabs(
+    config: Config, analyzer: TimeSpanAnalyzer
+) -> List[PairCohabRow]:
+    rows = []
+    for codwell_aggregate in analyzer.get_pair_inclusive_stats():
+        animal_a, animal_b = codwell_aggregate.tag_ids
+        rows.append(PairCohabRow(
+            animal_a_name=config.tag_id_to_name[animal_a],
+            animal_b_name=config.tag_id_to_name[animal_b],
+            dwell_count=codwell_aggregate.count,
+            duration_seconds=codwell_aggregate.duration_seconds,
+            test_duration=analyzer.duration,
+        ))
+    return rows
 
 def write_pair_inclusive_cohabs(
-    config: Config, out_dir: str, exp_name: str, analyzer: TimeSpanAnalyzer
+    rows: List[PairCohabRow], out_dir: str, exp_name: str
 ):
     with open(os.path.join(out_dir, exp_name + ".pair-inclusive.cohab.csv"), "w") as f:
         f.write("Animal A,Animal B,dwells,seconds,test_duration\n")
-        for codwell_aggregate in analyzer.get_pair_inclusive_stats():
-            animal_a, animal_b = codwell_aggregate.tag_ids
+        for row in rows:
             f.write(
                 "{},{},{},{:.0f},{:.0f}\n".format(
-                    config.tag_id_to_name[animal_a],
-                    config.tag_id_to_name[animal_b],
-                    codwell_aggregate.count,
-                    codwell_aggregate.duration_seconds,
-                    analyzer.duration,
+                    row.animal_a_name,
+                    row.animal_b_name,
+                    row.dwell_count,
+                    row.duration_seconds,
+                    row.test_duration,
                 )
             )

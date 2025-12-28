@@ -14,33 +14,67 @@
 
 
 import os
-
-from voletron.parse_config import parse_validation
+from typing import List, Dict, Set
+from voletron.types import AnimalName, TagID, Validation
+from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
+from voletron.output.types import ValidationRow
 
+def compute_validation(
+    tag_ids: List[TagID],
+    trajectories: AllAnimalTrajectories,
+    tag_id_to_name: Dict[TagID, AnimalName],
+    validations: List[Validation],
+) -> List[ValidationRow]:
+    rows = []
+    relevant_validations = [vv for vv in validations if vv.tag_id in tag_ids]
+    
+    for v in relevant_validations:
+        # Charitably use a 2-minute window
+        actual = trajectories.get_locations_between(
+            v.tag_id, v.timestamp - 30, v.timestamp + 90
+        )
+        ok = v.chamber in actual
+        
+        rows.append(ValidationRow(
+            correct=ok,
+            timestamp=v.timestamp,
+            animal_name=tag_id_to_name[v.tag_id],
+            expected_chamber=v.chamber,
+            observed_chambers=actual
+        ))
+    return rows
 
-def write_validation(tag_ids, out_dir, exp_name, trajectories, tag_id_to_name, validations) -> None:
+def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> None:
     print("\nValidation:")
     print("-----------------------------")
 
-    validations = [vv for vv in validations if vv.tag_id in tag_ids]
+    # Calculate correctness for printing
+    if rows:
+        correct_count = sum(1 for row in rows if row.correct)
+        total_count = len(rows)
+        percentage = correct_count / total_count
+    else:
+        correct_count = 0
+        total_count = 0
+        percentage = 0.0
 
     with open(os.path.join(out_dir, exp_name + ".validate.csv"), "w") as f:
         f.write("Correct,Timestamp,AnimalID,Expected,Observed\n")
-        correct = 0
-        for v in validations:
-            # Charitably use a 2-minute window
-            actual = trajectories.get_locations_between(
-                v.tag_id, v.timestamp - 30, v.timestamp + 90
+        
+        for row in rows:
+            f.write("{},{},{},{},{}\n".format(
+                row.correct,
+                format_time(row.timestamp),
+                row.animal_name,
+                row.expected_chamber,
+                row.observed_chambers
+            ))
+
+    if total_count > 0:
+        print(
+            "{} of {} ({:>6.2%}) validation points correct.".format(
+                correct_count, total_count, percentage
             )
-            ok = v.chamber in actual
-            correct += ok
-
-            f.write("{},{},{},{},{}\n".format(ok,format_time(v.timestamp),tag_id_to_name[v.tag_id], v.chamber, actual))
-
-    print(
-        "{} of {} ({:>6.2%}) validation points correct.".format(
-            correct, len(validations), correct / len(validations)
         )
-    )
 

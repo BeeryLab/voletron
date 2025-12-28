@@ -16,16 +16,16 @@
 import os
 from typing import List
 from voletron.apparatus_config import apparatus_chambers
-from voletron.output.write_validation import write_validation
+from voletron.output.write_validation import write_validation, compute_validation
 from voletron.types import Config, CoDwell, DurationSeconds, TimestampSeconds, Validation
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.output.write_chamber_times import write_chamber_times
-from voletron.output.write_long_dwells import write_long_dwells
-from voletron.output.write_activity import write_activity
-from voletron.output.write_pair_inclusive_cohabs import write_pair_inclusive_cohabs
-from voletron.output.write_group_chamber_cohabs import write_group_chamber_cohabs
-from voletron.output.write_group_sizes import write_group_sizes
+from voletron.output.write_chamber_times import write_chamber_times, compute_chamber_times
+from voletron.output.write_long_dwells import write_long_dwells, compute_long_dwells
+from voletron.output.write_activity import write_activity, compute_activity
+from voletron.output.write_pair_inclusive_cohabs import write_pair_inclusive_cohabs, compute_pair_inclusive_cohabs
+from voletron.output.write_group_chamber_cohabs import write_group_chamber_cohabs, compute_group_chamber_cohabs
+from voletron.output.write_group_sizes import write_group_sizes, compute_group_sizes
 
 def write_outputs(
     olcusDir: str,
@@ -55,79 +55,70 @@ def write_outputs(
         ]
 
         out_dir = os.path.join(olcusDir, "voletron_" + desired_start_chamber)
-        os.makedirs(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
 
         # Trajectory-based outputs
 
         if validation:
             # Validation
-            write_validation(
-                tag_ids,
-                out_dir,
-                exp_name,
-                trajectories,
-                config.tag_id_to_name,
-                validations,
-            )
+            validation_rows = compute_validation(tag_ids, trajectories, config.tag_id_to_name, validations)
+            write_validation(validation_rows, out_dir, exp_name)
 
-        write_chamber_times(
-            config,
-            tag_ids,
-            chambers,
-            out_dir,
-            exp_name,
-            trajectories,
-            analysis_start_time,
-            analysis_end_time,
-        )
+        chamber_time_rows = compute_chamber_times(config, tag_ids, chambers, trajectories, analysis_start_time, analysis_end_time)
+        write_chamber_times(chamber_time_rows, chambers, out_dir, exp_name)
 
-        write_long_dwells(config, tag_ids, out_dir, exp_name, trajectories)
+        long_dwell_rows = compute_long_dwells(config, tag_ids, trajectories)
+        write_long_dwells(long_dwell_rows, out_dir, exp_name)
         
         # This one builds its own analyzer per bin
+        activity_rows_wall = compute_activity(
+            trajectories,
+            co_dwells,
+            analysis_start_time,
+            analysis_end_time,
+            bin_seconds
+        )
         write_activity(
+            activity_rows_wall,
             out_dir,
             exp_name,
             "wall_clock",
-            trajectories,
-            co_dwells,
-            analysis_start_time,
-            analysis_end_time,
-            bin_seconds,
         )
         
+        activity_rows_habitat = compute_activity(
+             trajectories,
+             co_dwells,
+             TimestampSeconds(first_read_time + habitat_time_offset_seconds),
+             last_read_time,
+             bin_seconds
+        )
         write_activity(
+            activity_rows_habitat,
             out_dir,
             exp_name,
             "habitat_time",
-            trajectories,
-            co_dwells,
-            TimestampSeconds(first_read_time + habitat_time_offset_seconds),
-            last_read_time,
-            bin_seconds,
         )
 
         # TimeSpanAnalyzer-based outputs
 
+        pair_cohab_rows = compute_pair_inclusive_cohabs(config, analyzer)
         write_pair_inclusive_cohabs(
-            config,
+            pair_cohab_rows,
             out_dir,
             exp_name,
-            analyzer,
         )
 
+        group_chamber_rows = compute_group_chamber_cohabs(tag_ids, analyzer, config.tag_id_to_name)
         write_group_chamber_cohabs(
-            tag_ids,
+            group_chamber_rows,
             out_dir,
             exp_name,
-            analyzer,
-            config.tag_id_to_name,
         )
 
+        group_size_rows = compute_group_sizes(tag_ids, analyzer, config.tag_id_to_name)
         write_group_sizes(
-            tag_ids,
+            group_size_rows,
             out_dir,
             exp_name,
-            analyzer,
-            config.tag_id_to_name,
         )
 

@@ -18,7 +18,7 @@ import unittest
 import tempfile
 from unittest.mock import MagicMock
 
-from voletron.output.write_group_sizes import write_group_sizes
+from voletron.output.write_group_sizes import write_group_sizes, compute_group_sizes
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Traversal
@@ -46,13 +46,8 @@ class TestWriteGroupSizes(unittest.TestCase):
         co_dwells = state.end(TimestampSeconds(300))
         analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
 
-        write_group_sizes(
-            tag_ids,
-            out_dir,
-            exp_name,
-            analyzer,
-            tag_id_to_name
-        )
+        rows = compute_group_sizes(tag_ids, analyzer, tag_id_to_name)
+        write_group_sizes(rows, out_dir, exp_name)
 
         with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "r") as f:
             f.readline()

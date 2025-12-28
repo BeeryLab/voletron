@@ -18,22 +18,36 @@ from typing import List
 from voletron.types import Config, TagID
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
+from voletron.output.types import LongDwellRow
 
-def write_long_dwells(
+def compute_long_dwells(
     config: Config,
     tag_ids: List[TagID],
+    trajectories: AllAnimalTrajectories,
+) -> List[LongDwellRow]:
+    rows = []
+    for (tag_id, trajectory) in trajectories.animalTrajectories.items():
+        if not tag_id in tag_ids:
+            continue
+        for d in trajectory.long_dwells():
+            rows.append(LongDwellRow(
+                animal_name=config.tag_id_to_name[d[0]],
+                chamber_name=d[1],
+                start_time=d[2],
+                duration_seconds=d[3]
+            ))
+    return rows
+
+def write_long_dwells(
+    rows: List[LongDwellRow],
     out_dir: str,
     exp_name: str,
-    trajectories: AllAnimalTrajectories,
 ):
     with open(os.path.join(out_dir, exp_name + ".longdwells.csv"), "w") as f:
         f.write("animal,chamber,start_time,seconds\n")
-        for (tag_id, trajectory) in trajectories.animalTrajectories.items():
-            if not tag_id in tag_ids:
-                continue
-            for d in trajectory.long_dwells():
-                f.write(
-                    "{},{},{},{:.0f}\n".format(
-                        config.tag_id_to_name[d[0]], d[1], format_time(d[2]), d[3]
-                    )
+        for row in rows:
+            f.write(
+                "{},{},{},{:.0f}\n".format(
+                    row.animal_name, row.chamber_name, format_time(row.start_time), row.duration_seconds
                 )
+            )

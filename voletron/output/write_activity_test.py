@@ -14,7 +14,7 @@
 
 import unittest
 from unittest.mock import MagicMock, patch, mock_open
-from voletron.output.write_activity import write_activity
+from voletron.output.write_activity import write_activity, compute_activity
 from voletron.types import TimestampSeconds, DurationSeconds, TagID, ChamberName, CoDwell
 from voletron.trajectory import AllAnimalTrajectories
 
@@ -42,15 +42,18 @@ class TestWriteActivity(unittest.TestCase):
         # Mock open
         m = mock_open()
         with patch("builtins.open", m):
-            write_activity(
-                out_dir="out",
-                exp_name="exp",
-                boundary_type="test",
+            rows = compute_activity(
                 trajectories=mock_trajectories,
                 co_dwells=co_dwells,
                 analysis_start_time=start_time,
                 analysis_end_time=end_time,
                 bin_secs=bin_size
+            )
+            write_activity(
+                rows=rows,
+                out_dir="out",
+                exp_name="exp",
+                boundary_type="test",
             )
 
         # Check file calls

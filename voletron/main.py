@@ -43,13 +43,14 @@ def _parse_args(argv):
     parser.add_argument(
         "--olcus_dir",
         "--olcusDir",
-        required=True,
-        help="A directory containing Olcus output files.  "
+        required=False,
+        default=".",
+        help="A directory containing Olcus output files. Defaults to current directory. "
         "Any file in this directory called `raw*.csv` will be processed.  "
         "The directory must contain exactly one file called `animals.csv` (or `*_animals.csv`), "
         "comprised of lines of the form `animal_name, tag_id, initial_chamber`, "
-        "and exactly one file called `apparatus.json` (or `*_apparatus.json`), "
-        "formatted as shown in the provided `apparatus_example.json`, "
+        "exactly one file called `apparatus.json` (or `*_apparatus.json`), "
+        "formatted as shown in the provided `example_apparatus.json`, "
         "and optionally exactly one file called `validation.csv` (or `*_validation.csv`), "
         "comprised of lines of the form `timestamp, animal_name, expected_chamber`.",
     )

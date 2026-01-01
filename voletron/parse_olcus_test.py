@@ -24,7 +24,7 @@ from voletron.apparatus_config import load_apparatus_config
 class TestParse(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("apparatus_example.json")
+        load_apparatus_config("example_apparatus.json")
 
     def test_parse_raw_line(self):
         line = "3168630996;05.03.2020 16:14:11:796;0;0;972273000584934"

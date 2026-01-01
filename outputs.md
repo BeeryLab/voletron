@@ -1,6 +1,6 @@
 # Voletron Output Formats
 
-Voletron generates several CSV files containing different analyses of the animal tracking data. These files are typically found in a subdirectory named `voletron_<chamber_name>` within your data directory.
+Voletron generates several CSV files containing different analyses of the animal tracking data. These files are typically found in a subdirectory named `voletron/<start_chamber>` within your data directory.
 
 **Output Binning:**
 All output files now support time binning. For each metric, rows are generated for:

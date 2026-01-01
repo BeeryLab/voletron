@@ -31,7 +31,13 @@ from voletron.apparatus_config import load_apparatus_config
 class TestTrajectoryUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("apparatus_example.json")
+        # Assumes running from project root
+        import os
+        config_path = os.path.abspath("example_apparatus.json")
+        if not os.path.exists(config_path):
+             # Try one level up if in subdirectory? Or just rely on CWD
+             pass
+        load_apparatus_config("example_apparatus.json")
 
     def test_chamber_between(self):
         ab = Antenna(ChamberName("ChamberA"), ChamberName("ChamberB"))
@@ -84,7 +90,7 @@ class TestTrajectoryUtils(unittest.TestCase):
 class TestAnimalTrajectory(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("apparatus_example.json")
+        load_apparatus_config("example_apparatus.json")
 
     def test_init_dwell(self):
         t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
@@ -371,7 +377,7 @@ class TestAnimalTrajectory(unittest.TestCase):
 class TestAllAnimalTrajectories(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("apparatus_example.json")
+        load_apparatus_config("example_apparatus.json")
 
     def test_traversals(self):
         start_time = TimestampSeconds(100)

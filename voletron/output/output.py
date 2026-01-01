@@ -76,7 +76,7 @@ def write_outputs(
             if start_chamber == desired_start_chamber
         ]
 
-        out_dir = os.path.join(olcusDir, "voletron_" + desired_start_chamber)
+        out_dir = os.path.join(olcusDir, "voletron", desired_start_chamber)
         os.makedirs(out_dir, exist_ok=True)
 
         # Trajectory-based outputs

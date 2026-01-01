@@ -18,4 +18,9 @@ from setuptools import setup, find_packages
 setup(
     name="voletron",
     packages=find_packages(),
+    entry_points={
+        'console_scripts': [
+            'voletron=voletron.main:main',
+        ],
+    },
 )

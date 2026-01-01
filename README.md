@@ -62,15 +62,44 @@ python -m venv venv
 venv\Scripts\activate.bat
 ```
 
-**5. Install Dependencies**
+**6. Install Voletron (Optional but Recommended)**
 
-This project requires `pytz` for timezone handling.
+Install Voletron in your Python environment:
+
+```
+python setup.py install
+```
+
+Once installed, you can run it like this:
+
+```bash
+
+voletron [ARGUMENTS]
+```
+
+***Advantages of Installation:***
+1.  **Convenience**: You can run `voletron` from *any* directory, not just the source folder.
+2.  **Cleanliness**: You don't need to type `python -m voletron.main`.
+3.  **Integration**: It behaves like a standard system tool.
+
+
+**7. Running Voletron without installing it**
+
+If you prefer not to install Voletron, you can run it directly from the source folder.
+
+In this case, first install `pytz`, which is required for timezone handling:
 ```bash
 pip install pytz
 ```
-*(There is no need to run setup.py install)*
+
+With this setup, Voletron can be executed directly, but only from the source folder:
+
+```
+python -m voletron.main [...]
+```
 
 ### 2. Prepare your data
+
 Voletron analyzes one experiment at a time. Create a folder (e.g., `data/my_experiment/`) and place the following files inside:
 
 **A. Raw Data from OLCUS**
@@ -90,7 +119,7 @@ Vole2, 982000356654321, CentralA
 **C. Apparatus Configuration**
 -   Describes the hardware layout (which antenna ID maps to which chamber).
 -   Accepted names: `apparatus.json` OR `*_apparatus.json` (case-insensitive).
--   See `apparatus_example.json` in this repo for the structure.
+-   See `example_apparatus.json` in this repo for the structure.
 
 **D. (Optional) Validation File**
 -   Ground truth observations for manual validation.
@@ -101,44 +130,40 @@ Timestamp, AnimalName, Chamber
 13.09.2020 12:00, Vole1, Tube1
 ```
 
-### 3. Running the Code
+### 3. Running the Analysis
 
-To run Voletron, use the following command structure from the main folder:
+To run Voletron, simply type:
 
 ```bash
-python -m voletron.main [ARGUMENTS]
+voletron
 ```
 
-**Example:**
+If the `--olcus_dir` argument is not specified, Voletron will look for the default files in the current directory (i.e., you can navigate to the data directory first).
+
+Outputs will be written to a subdirectory named `voletron/` within the data directory.
+
+All arguments are optional.  For more details on arguments, please run
+
+```
+voletron --help
+```
+
+**Example (All Arguments):**
 ```bash
-python -m voletron.main --config_file="my_config.csv" --olcus_dir="data/raw_reads/" --output_dir="data/output/"
+voletron \
+  --olcus_dir="data/raw_reads/" \
+  --start="01.01.2023 12:00:00:000" \
+  --end="02.01.2023 12:00:00:000" \
+  --bin_seconds=300 \
+  --timezone="US/Pacific" \
+  --dwell_threshold=10 \
+  --verbose
 ```
 
-See the **Usage** section below for more details on arguments.
+
 
 ---
 
-## Installation (Advanced Users)
-
-Voletron can be executed directly:
-
-```
-python -m voletron.main [...]
-```
-
-or can be installed in your Python enviroment:
-
-```
-python setup.py install
-```
-
-## Usage
-
-Please run
-
-```
-python -m voletron.main --help
-```
 
 ## Run unit tests
 

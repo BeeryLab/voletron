@@ -73,7 +73,7 @@ class TestTrajectoryUtils(unittest.TestCase):
 
 class TestAnimalTrajectory(unittest.TestCase):
     def test_init_dwell(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
 
         readA = Read(TagID("tag_a"), TimestampSeconds(23456), Antenna(ChamberName("Tube1"), ChamberName("CentralA")))
         fate = t.update_from_read(readA)
@@ -106,7 +106,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_repeated_read_short(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
 
         antenna = Antenna(ChamberName("Tube1"), ChamberName("CentralA"))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(23456), antenna))
@@ -124,7 +124,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_repeated_read_long(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
 
         antenna = Antenna(ChamberName("Tube1"), ChamberName("CentralA"))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(23456), antenna))
@@ -141,7 +141,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_move(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(23456), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         fate = t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(34567), Antenna(ChamberName("Tube1"), ChamberName("Cage1"))))
@@ -157,7 +157,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_one_missing(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(23456), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         fate = t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(34567), Antenna(ChamberName("Tube2"), ChamberName("Cage2"))))
@@ -174,7 +174,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_two_missing(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(23456), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(34567), Antenna(ChamberName("Tube1"), ChamberName("Cage1"))))
@@ -193,7 +193,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_traversals(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube1"), ChamberName("Cage1"))))
@@ -226,7 +226,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_long_dwells(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube1"), ChamberName("Cage1"))))
@@ -260,7 +260,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_time_per_chamber_unrestricted(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube1"), ChamberName("Cage1"))))
@@ -298,7 +298,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_time_per_chamber_restricted(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube1"), ChamberName("Cage1"))))
@@ -335,7 +335,7 @@ class TestAnimalTrajectory(unittest.TestCase):
         )
 
     def test_get_locations_between(self):
-        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100))
+        t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(100), 10.0)
 
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(200), Antenna(ChamberName("Tube1"), ChamberName("CentralA"))))
         t.update_from_read(Read(TagID("tag_a"), TimestampSeconds(300), Antenna(ChamberName("Tube1"), ChamberName("Cage1"))))
@@ -377,7 +377,7 @@ class TestAllAnimalTrajectories(unittest.TestCase):
             ],
         }
 
-        t = AllAnimalTrajectories(start_time, tag_id_to_start_chamber, reads_per_animal)
+        t = AllAnimalTrajectories(start_time, tag_id_to_start_chamber, reads_per_animal, 10.0)
 
         self.assertEqual(
             list(t.traversals()),

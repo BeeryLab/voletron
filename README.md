@@ -32,7 +32,7 @@ chamber) over time, and so forth.
 Voletron can be executed directly:
 
 ```
-python voletron/main.py [...]
+python -m voletron.main [...]
 ```
 
 or can be installed in your Python enviroment:
@@ -46,7 +46,7 @@ python setup.py install
 Please run
 
 ```
-python voletron/main.py --help
+python -m voletron.main --help
 ```
 
 ## Run unit tests

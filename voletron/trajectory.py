@@ -13,11 +13,14 @@
 # limitations under the License.
 
 
+
 from collections import defaultdict
 from enum import Enum
-from typing import Dict, Generator, List
+import heapq
+from typing import Dict, Generator, List, Iterator
 
 from voletron.apparatus_config import all_antennae
+from voletron.constants import INFERRED_READ_EPSILON
 from voletron.types import CHAMBER_ERROR, CHAMBER_OUTSIDE, Antenna, ChamberName, DurationMinutes, DurationSeconds, Dwell, LongDwell, Read, TagID, TimestampSeconds, Traversal, chamberBetween
 from voletron.util import seconds_between_timestamps
 
@@ -92,13 +95,13 @@ def infer_missing_read(readA: Read, readB: Read):
     for antenna in all_antennae:
         if antenna.tube == readA.antenna.tube and antenna.cage == readB.antenna.cage:
             # Tube => Central Arena case.
-            infer_timestamp = TimestampSeconds(readA.timestamp + 0.001)  # Add 1 ms to enforce sort order
+            infer_timestamp = TimestampSeconds(readA.timestamp + INFERRED_READ_EPSILON)  # Add epsilon to enforce sort order
             return Read(readA.tag_id, infer_timestamp, antenna)
         elif antenna.cage == readA.antenna.cage and antenna.tube == readB.antenna.tube:
             # Central Arena => Tube case.
             infer_timestamp = (
-                TimestampSeconds(readB.timestamp - 0.001)
-            )  # Subtract 1 ms to enforce sort order
+                TimestampSeconds(readB.timestamp - INFERRED_READ_EPSILON)  # Subtract epsilon to enforce sort order
+            )
             return Read(readA.tag_id, infer_timestamp, antenna)
 
     ambiguous_seconds = readB.timestamp - readA.timestamp
@@ -116,9 +119,10 @@ class ReadFate(Enum):
 class _AnimalTrajectory:
     """Tracks the path of a single animal through the apparatus over time."""
 
-    def __init__(self, tag_id: TagID, initial_chamber: ChamberName, start_time: TimestampSeconds):
+    def __init__(self, tag_id: TagID, initial_chamber: ChamberName, start_time: TimestampSeconds, dwell_threshold: float):
         self.tag_id = tag_id
         self.chamber = initial_chamber
+        self.dwell_threshold = dwell_threshold
         self.dwells = [
             Dwell(start_time, start_time, CHAMBER_OUTSIDE)
         ]  # The animal was outside the apparatus before the experiment
@@ -174,7 +178,7 @@ class _AnimalTrajectory:
 
         Args:
             read: a Read object representing the presence of the animal at an
-              Antenna.
+            Antenna.
         """
         if read.tag_id != self.tag_id:
             raise ValueError("Can't update trajectory with Read from the wrong tag.")
@@ -194,8 +198,7 @@ class _AnimalTrajectory:
                 read.timestamp, self.priorRead.timestamp
             )
 
-            # TODO: make the dwell time threshold configurable.
-            if seconds_between_reads >= 10:
+            if seconds_between_reads >= self.dwell_threshold:
                 dwellChamber = long_dwell_chamber(read.antenna)
                 fate = ReadFate.Long_Cage
             else:
@@ -296,9 +299,10 @@ class AllAnimalTrajectories:
         start_time: TimestampSeconds,
         tag_id_to_start_chamber: Dict[TagID, ChamberName],
         reads_per_animal: Dict[TagID, List[Read]],
+        dwell_threshold: float,
     ):
         self.animalTrajectories = {
-            tag_id: _AnimalTrajectory(tag_id, initialChamber, start_time)
+            tag_id: _AnimalTrajectory(tag_id, initialChamber, start_time, dwell_threshold)
             for [tag_id, initialChamber] in tag_id_to_start_chamber.items()
         }
         fate_counts = {member: 0 for fate, member in ReadFate.__members__.items()}
@@ -321,7 +325,7 @@ class AllAnimalTrajectories:
             for key, value in fate_counts.items()
         }
 
-    def traversals(self) -> Generator[Traversal, None, None]:
+    def traversals(self) -> Iterator[Traversal]:
         """
         Provides all Traversals of all animals through the apparatus, in
         chronological order.  This differs from the sequence of Reads in that
@@ -334,21 +338,12 @@ class AllAnimalTrajectories:
             A stream of Traversal objects for all animals, in chronological
             order.
         """
-        traversalsPerAnimal = {
-            tag_id: traj.traversals()
-            for (tag_id, traj) in self.animalTrajectories.items()
-        }
-        peeks = {
-            tag_id: trav.__next__() for (tag_id, trav) in traversalsPerAnimal.items()
-        }
-        while peeks:
-            next_tag_id = min(peeks, key=(lambda x: peeks[x].timestamp))
-            result = peeks[next_tag_id]
-            try:
-                peeks[next_tag_id] = traversalsPerAnimal[next_tag_id].__next__()
-            except StopIteration:
-                del peeks[next_tag_id]
-            yield result
+        traversalsPerAnimal = [
+            traj.traversals()
+            for traj in self.animalTrajectories.values()
+        ]
+        
+        return heapq.merge(*traversalsPerAnimal, key=lambda t: t.timestamp)
 
     def get_locations_between(self, tag_id: TagID, start: TimestampSeconds, end: TimestampSeconds) -> List[str]:
         return self.animalTrajectories[tag_id].get_locations_between(start, end)

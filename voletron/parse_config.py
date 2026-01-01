@@ -14,6 +14,7 @@
 
 
 import datetime
+import logging
 from typing import Dict, Union
 from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
@@ -87,6 +88,6 @@ def parse_validation(filename: str, name_to_tag_id: Dict[AnimalName, TagID], tim
                 
                
             except KeyError:
-                print("Validation config contains unknown animal: {}".format(animalid))
+                logging.warning("Validation config contains unknown animal: {}".format(animalid))
 
     return result

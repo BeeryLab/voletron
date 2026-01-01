@@ -14,6 +14,7 @@
 
 
 import os
+import logging
 from typing import List, Dict, Set, Tuple
 from voletron.types import AnimalName, TagID, Validation, TimestampSeconds, DurationSeconds
 from voletron.trajectory import AllAnimalTrajectories
@@ -57,8 +58,8 @@ def compute_validation(
     return rows
 
 def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> None:
-    print("\nValidation:")
-    print("-----------------------------")
+    logging.info("\nValidation:")
+    logging.info("-----------------------------")
 
     # Calculate correctness for printing (using whole experiment rows if possible, or all?)
     # Generally, printing summary usually refers to unique events. If we duplicate rows for bins,
@@ -97,7 +98,7 @@ def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> 
             ))
 
     if total_count > 0:
-        print(
+        logging.info(
             "{} of {} ({:>6.2%}) validation points correct (across all bins).".format(
                 correct_count, total_count, percentage
             )

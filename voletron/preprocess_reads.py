@@ -14,6 +14,7 @@
 
 
 from typing import Dict, Iterable, List
+import logging
 from voletron.types import AnimalName, Read, TagID, TimestampSeconds, chamberBetween
 
 
@@ -24,8 +25,8 @@ def preprocess_reads(
     # swapping the order of nearly-simultaneous reads for increased parsimony.
     reads_per_animal = split_reads_per_animal(reads, tag_ids)
 
-    print("\nPreprocessing:")
-    print("-----------------------------")
+    logging.info("\nPreprocessing:")
+    logging.info("-----------------------------")
     for [tag_id, animal_reads] in reads_per_animal.items():
         # mutating
         _spaced_reads(animal_reads)
@@ -41,7 +42,7 @@ def split_reads_per_animal(
         try:
             result[read.tag_id].append(read)
         except KeyError:
-            print("    *** UNKNOWN TAG: {} ***".format(read.tag_id))
+            logging.warning("    *** UNKNOWN TAG: {} ***".format(read.tag_id))
     return result
 
 
@@ -69,7 +70,7 @@ def _spaced_reads(reads: List[Read]) -> None:
             jitter = b_new - b_orig
             # print("Jitter: {}: {} -> {} ({})".format(a.timestamp, b_orig, b_new, jitter))
             if jitter > 0.003:
-                print("Jitter > 3 msec!")
+                logging.warning("Jitter > 3 msec!")
 
 
 def _parsimonious_reads(
@@ -102,7 +103,7 @@ def _parsimonious_reads(
             )
 
             if bc == None:
-                print("Simultaneous disparate reads: {} {}".format(b, c))
+                logging.warning("Simultaneous disparate reads: {} {}".format(b, c))
             else:
                 if ac + bd > ab + cd:  # Greater parsimony if we swap b and c
                     count += 1
@@ -110,4 +111,4 @@ def _parsimonious_reads(
                     b_later = Read(b.tag_id, c.timestamp, b.antenna)
                     reads[i : i + 4] = [a, c_earlier, b_later, d]
 
-    print("Parsimony swaps: {} {}".format(tag_id_to_name[tag_id], count))
+    logging.info("Parsimony swaps: {} {}".format(tag_id_to_name[tag_id], count))

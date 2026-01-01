@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import argparse
 import datetime
 import glob
+import logging
 import os
 import sys
 from typing import Dict
@@ -22,7 +24,7 @@ import pytz
 
 from voletron.output.output import write_outputs
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Removed sys.path hack. Please run as python -m voletron.main
 
 from voletron.apparatus_config import all_chambers
 from voletron.parse_config import parse_config, parse_validation
@@ -31,6 +33,7 @@ from voletron.preprocess_reads import preprocess_reads
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
+from voletron.constants import INFERRED_READ_EPSILON, DEFAULT_TIME_BETWEEN_READS_THRESHOLD
 from voletron.types import Config, Read, TagID, TimestampSeconds, Validation
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 
@@ -93,6 +96,17 @@ def _parse_args(argv):
         "are listed at "
         "https://en.wikipedia.org/wiki/List_of_tz_database_time_zones."
         )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging."
+    )
+    parser.add_argument(
+        "--dwell_threshold",
+        type=float,
+        default=DEFAULT_TIME_BETWEEN_READS_THRESHOLD,
+        help="Time in seconds between reads to switch from short dwell (tube) to long dwell (cage/arena). Default: {}".format(DEFAULT_TIME_BETWEEN_READS_THRESHOLD)
+    )
     return parser.parse_args()
 
 
@@ -122,14 +136,15 @@ def main(argv):
     """Analyze a 'raw' file describing Olcus antenna data from a Beery Lab
     vole group-living RFID apparatus.  Infers co-habitation bouts and total
     co-hab duration for each pair of animals."""
-
-    print("\n===================================")
-    print("Voletron v2.0, 2025-12-21")
-    print("http://github.com/beerylab/voletron")
-    print("===================================")
-    print("")
-
     args = _parse_args(argv)
+    
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format='%(message)s')
+
+    logging.info("===================================")
+    logging.info("Voletron v2.0, 2025-12-21")
+    logging.info("http://github.com/beerylab/voletron")
+    logging.info("===================================")
+
     timezone : datetime.tzinfo = pytz.timezone(args.timezone)
 
     ### Read input config and validation files
@@ -139,7 +154,7 @@ def main(argv):
     reads_per_animal, first_read_time, analysis_start_time, analysis_end_time, last_read_time = _load_and_validate_data(args, config, olcusDir, timezone)
     
     ### Infer animal trajectories from antenna reads
-    trajectories = _build_trajectories(first_read_time, config, reads_per_animal)
+    trajectories = _build_trajectories(first_read_time, config, reads_per_animal, args.dwell_threshold)
     
     # Simulate state forwards, accumulating stats in the state object
     # and write it out along the way
@@ -168,8 +183,8 @@ def main(argv):
 
 def _load_and_validate_data(args, config, olcusDir, timezone):
     """Load raw data, handle preprocessing, and determine time intervals."""
-    print("\nReading Data:")
-    print("-----------------------------")
+    logging.info("\nReading Data:")
+    logging.info("-----------------------------")
     reads = parse_raw_dir(olcusDir, timezone)
     
     # The first read may require inserting a missing read before it;
@@ -209,33 +224,35 @@ def _get_analysis_end_time(args, timezone, last_read_time):
 def _warn_unobserved_animals(reads_per_animal):
     unobserved_animals = [kk for (kk, vv) in reads_per_animal.items() if len(vv) == 0]
     if unobserved_animals:
-        print("\n\n-----------------------------")
-        print("WARNING: Animals in config but not observed:")
-        print(unobserved_animals)
-        print("----------------------------\n\n")
+        logging.warning("\n-----------------------------")
+        logging.warning("WARNING: Animals in config but not observed:")
+        logging.warning(unobserved_animals)
+        logging.warning("----------------------------\n")
 
 
 def _print_time_intervals(first_read_time, analysis_start_time, analysis_end_time, last_read_time):
-    print("\nIntervals:")
-    print("-----------------------------")
-    print("Experiment Start (first read): {}".format(format_time(first_read_time)))
-    print("               Analysis Start: {}".format(format_time(analysis_start_time)))
-    print("                 Analysis End: {}".format(format_time(analysis_end_time)))
-    print("   Experiment End (last read): {}".format(format_time(last_read_time)))
+    logging.info("\nIntervals:")
+    logging.info("-----------------------------")
+    logging.info("Experiment Start (first read): {}".format(format_time(first_read_time)))
+    logging.info("               Analysis Start: {}".format(format_time(analysis_start_time)))
+    logging.info("                 Analysis End: {}".format(format_time(analysis_end_time)))
+    logging.info("   Experiment End (last read): {}".format(format_time(last_read_time)))
 
 
-def _build_trajectories(first_read_time: TimestampSeconds, config: Config, reads_per_animal: Dict[TagID, list[Read]]) -> AllAnimalTrajectories:
+def _build_trajectories(first_read_time: TimestampSeconds, config: Config, reads_per_animal: Dict[TagID, list[Read]], dwell_threshold: float) -> AllAnimalTrajectories:
     """Build animal trajectories from preprocessed reads."""
     all_animal_trajectories = AllAnimalTrajectories(
-        first_read_time, config.tag_id_to_start_chamber, reads_per_animal
+        first_read_time, config.tag_id_to_start_chamber, reads_per_animal, dwell_threshold
     )
 
-    print("\nRead Interpretations:")
-    print("-----------------------------")
+    logging.info("\nRead Interpretations:")
+    logging.info("-----------------------------")
     for [key, value] in all_animal_trajectories.fate_percent.items():
-        print("{:>10}: {}".format(key, value))
+        logging.info("{:>10}: {}".format(key, value))
         
     return all_animal_trajectories
 
 
-main(sys.argv)
+if __name__ == "__main__":
+    main(sys.argv)
+

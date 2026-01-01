@@ -15,6 +15,7 @@
 
 import datetime
 import glob
+import logging
 import os
 import sys
 from typing import Generator, NewType, Optional, Union
@@ -65,7 +66,9 @@ def parse_raw_file(filename: str, timezone: datetime.tzinfo) -> Generator[Read, 
 
     Yields: one Read per line of input (excluding the header line)
     """
-    print(filename)
+
+    logging.info("Reading file: {}".format(filename))
+
 
     with open(filename) as file:
         file.readline()  # skip headers

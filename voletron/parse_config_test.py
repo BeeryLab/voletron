@@ -49,7 +49,7 @@ class TestParseValidation(unittest.TestCase):
         load_apparatus_config("apparatus_example.json")
 
     def test_parse_validation_valid(self):
-        mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, Animal1, Cage1"
+        mock_data = "Timestamp, AnimalName, Chamber\n13.09.2020 12:00, Animal1, Cage1"
         name_to_tag = {"Animal1": "tag1"}
         timezone = pytz.timezone("UTC")
         
@@ -64,7 +64,7 @@ class TestParseValidation(unittest.TestCase):
 
     def test_parse_validation_unknown_animal(self):
         # Should just skip unknown animals and print a message
-        mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, UnknownAnimal, Cage1"
+        mock_data = "Timestamp, AnimalName, Chamber\n13.09.2020 12:00, UnknownAnimal, Cage1"
         name_to_tag = {"Animal1": "tag1"}
         timezone = pytz.timezone("UTC")
         

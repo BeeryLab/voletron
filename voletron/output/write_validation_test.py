@@ -93,7 +93,7 @@ class TestWriteValidation(unittest.TestCase):
         
         with open(expected_file, 'r') as f:
             content = f.read()
-            self.assertIn("bin_start,bin_end,Correct,Timestamp,AnimalID,Expected,Observed", content)
+            self.assertIn("bin_start,bin_end,Correct,Timestamp,AnimalName,Expected,Observed", content)
             self.assertIn("0,100,True", content)
 
 if __name__ == '__main__':

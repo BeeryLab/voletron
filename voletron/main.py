@@ -46,8 +46,12 @@ def _parse_args(argv):
         required=True,
         help="A directory containing Olcus output files.  "
         "Any file in this directory called `raw*.csv` will be processed.  "
-        "The directory must contain exactly one file called `*_Config.csv`, "
-        "comprised of lines of the form `animal_name, tag_id, initial_chamber`.",
+        "The directory must contain exactly one file called `animals.csv` (or `*_animals.csv`), "
+        "comprised of lines of the form `animal_name, tag_id, initial_chamber`, "
+        "and exactly one file called `apparatus.json` (or `*_apparatus.json`), "
+        "formatted as shown in the provided `apparatus_example.json`, "
+        "and optionally exactly one file called `validation.csv` (or `*_validation.csv`), "
+        "comprised of lines of the form `timestamp, animal_name, expected_chamber`.",
     )
     parser.add_argument(
         "--start",
@@ -134,10 +138,10 @@ def _find_file(directory: str, exact_name: str, suffix: str) -> str | None:
 
 
 def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
-    # Look for config.csv or *_config.csv
-    configFile = _find_file(args.olcus_dir, "config.csv", "_config.csv")
+    # Look for animals.csv or *_animals.csv
+    configFile = _find_file(args.olcus_dir, "animals.csv", "_animals.csv")
     if not configFile:
-        raise ValueError("Could not find exactly one `*_Config.csv` or `config.csv` file.")
+        raise ValueError("Could not find exactly one `*_animals.csv` or `animals.csv` file.")
     
     config = parse_config(configFile)
 

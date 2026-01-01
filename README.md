@@ -74,12 +74,12 @@ pip install pytz
 Voletron analyzes one experiment at a time. Create a folder (e.g., `data/my_experiment/`) and place the following files inside:
 
 **A. Raw Data from OLCUS**
--   A flat directory of `.csv` files (e.g., `raw_data_001.csv`, `raw_data_002.csv`).
+-   A set of `.csv` files (e.g., `raw_data_001.csv`, `raw_data_002.csv`) containing the raw data from OLCUS.
 -   Format: `cantimestamp; datetimestamp; deviceid; antennaID; data`.
 
-**B. Configuration File**
+**B. Animal Configuration File**
 -   CSV file mapping animals to RFID tags and start locations.
--   Accepted names: `config.csv` OR `*_config.csv` (case-insensitive).
+-   Accepted names: `animals.csv` OR `*_animals.csv` (case-insensitive).
 -   **Columns**: `AnimalName, TagId, StartChamber`
 ```csv
 AnimalName, TagId, StartChamber
@@ -95,9 +95,9 @@ Vole2, 982000356654321, CentralA
 **D. (Optional) Validation File**
 -   Ground truth observations for manual validation.
 -   Accepted names: `validation.csv` OR `*_validation.csv` (case-insensitive).
--   **Columns**: `Timestamp, AnimalID, Chamber`
+-   **Columns**: `Timestamp, AnimalName, Chamber`
 ```csv
-Timestamp, AnimalID, Chamber
+Timestamp, AnimalName, Chamber
 13.09.2020 12:00, Vole1, Tube1
 ```
 

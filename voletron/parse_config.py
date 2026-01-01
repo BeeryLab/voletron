@@ -66,7 +66,7 @@ def parse_validation(filename: str, name_to_tag_id: Dict[AnimalName, TagID], tim
     with open(filename) as file:
         header = file.readline().strip()
         headers = [x.strip() for x in header.split(",")]
-        expected_headers = ["Timestamp", "AnimalID", "Chamber"]
+        expected_headers = ["Timestamp", "AnimalName", "Chamber"]
         if headers != expected_headers:
             raise ValueError(f"Invalid headers. Expected {expected_headers}, got {headers}")
         
@@ -74,20 +74,20 @@ def parse_validation(filename: str, name_to_tag_id: Dict[AnimalName, TagID], tim
             line = line.strip()
             if line.startswith("#") or line == "" or line == ",,":
                 continue
-            (time_str, animalid, chamber) = [x.strip() for x in line.split(",")]
+            (time_str, animal_name, chamber) = [x.strip() for x in line.split(",")]
             try:
-                tag_id = name_to_tag_id[AnimalName(animalid)]
+                tag_id = name_to_tag_id[AnimalName(animal_name)]
                 timestamp = TimestampSeconds(timezone.localize(datetime.datetime.strptime(
                     time_str, "%d.%m.%Y %H:%M"
                 )).timestamp())
 
                 if ChamberName(chamber) not in all_chambers:
-                    raise ValueError(f"Invalid chamber {chamber} for animal {animalid} at time {time_str}")
+                    raise ValueError(f"Invalid chamber {chamber} for animal {animal_name} at time {time_str}")
             
                 result.append(Validation(timestamp, tag_id, ChamberName(chamber)))
                 
                
             except KeyError:
-                logging.warning("Validation config contains unknown animal: {}".format(animalid))
+                logging.warning("Validation config contains unknown animal: {}".format(animal_name))
 
     return result

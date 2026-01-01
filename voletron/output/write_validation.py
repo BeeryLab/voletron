@@ -86,7 +86,7 @@ def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> 
         percentage = 0.0
 
     with open(os.path.join(out_dir, exp_name + ".validate.csv"), "w") as f:
-        f.write("bin_start,bin_end,Correct,Timestamp,AnimalID,Expected,Observed\n")
+        f.write("bin_start,bin_end,Correct,Timestamp,AnimalName,Expected,Observed\n")
         
         for row in rows:
             f.write("{},{},{},{},{},{},{}\n".format(

@@ -41,7 +41,9 @@ from voletron.time_span_analyzer import TimeSpanAnalyzer
 def _parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "olcusDir",
+        "--olcus_dir",
+        "--olcusDir",
+        required=True,
         help="A directory containing Olcus output files.  "
         "Any file in this directory called `raw*.csv` will be processed.  "
         "The directory must contain exactly one file called `*_Config.csv`, "
@@ -86,7 +88,7 @@ def _parse_args(argv):
     #     default=600
     # )
     parser.add_argument(
-        "timezone",
+        "--timezone",
         default="US/Pacific",
         help="Olcus logs timestamps in the local timezone, but does not record "
         "which timezone that is.  Thus, we allow specifying the timezone in "
@@ -107,16 +109,11 @@ def _parse_args(argv):
         default=DEFAULT_TIME_BETWEEN_READS_THRESHOLD,
         help="Time in seconds between reads to switch from short dwell (tube) to long dwell (cage/arena). Default: {}".format(DEFAULT_TIME_BETWEEN_READS_THRESHOLD)
     )
-    parser.add_argument(
-        "--apparatus_config",
-        default="voletron/apparatus.json",
-        help="Path to the apparatus configuration JSON file. Default: 'voletron/apparatus.json'"
-    )
     return parser.parse_args()
 
 
 def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
-    configFiles = glob.glob(os.path.join(args.olcusDir, "*_[Cc]onfig.csv"))
+    configFiles = glob.glob(os.path.join(args.olcus_dir, "*_[Cc]onfig.csv"))
     if len(configFiles) != 1:
         raise ValueError("Could not find exactly one `*_Config.csv` file.")
 
@@ -124,7 +121,7 @@ def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
 
     validations: list[Validation] = []
     if args.validation:
-        validationFiles = glob.glob(os.path.join(args.olcusDir, "*_[Vv]alidation.csv"))
+        validationFiles = glob.glob(os.path.join(args.olcus_dir, "*_[Vv]alidation.csv"))
         if len(configFiles) != 1:
             raise ValueError("Could not find exactly one `*_Validation.csv` file.")
 
@@ -132,7 +129,7 @@ def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
             validationFiles[0], {v: k for (k, v) in config.tag_id_to_name.items()}, timezone
         )
 
-    olcusDir = os.path.normpath(args.olcusDir)
+    olcusDir = os.path.normpath(args.olcus_dir)
 
     return (config, validations, olcusDir)
 
@@ -150,11 +147,11 @@ def main(argv):
     logging.info("http://github.com/beerylab/voletron")
     logging.info("===================================")
 
-    load_apparatus_config(args.apparatus_config)
 
     timezone : datetime.tzinfo = pytz.timezone(args.timezone)
 
     ### Read input config and validation files
+    load_apparatus_config(os.path.join(args.olcus_dir, "apparatus.json"))
     config, validations, olcusDir = _parse_config(args, timezone)
     
     ### Read raw data
@@ -196,7 +193,7 @@ def _load_and_validate_data(args, config, olcusDir, timezone):
     
     # The first read may require inserting a missing read before it;
     # start the experiment 5 ms earlier to account for this.
-    first_read_time: TimestampSeconds = TimestampSeconds(parse_first_read(args.olcusDir, timezone).timestamp - 0.005)
+    first_read_time: TimestampSeconds = TimestampSeconds(parse_first_read(args.olcus_dir, timezone).timestamp - 0.005)
     analysis_start_time = _get_analysis_start_time(args, timezone, first_read_time)
     
     ### Initial cleanup of the reads, per animal

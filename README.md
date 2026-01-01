@@ -77,7 +77,7 @@ python -m voletron.main [ARGUMENTS]
 
 **Example:**
 ```bash
-python -m voletron.main --config_file="my_config.csv" --raw_dir="data/raw_reads/" --output_dir="data/output/"
+python -m voletron.main --config_file="my_config.csv" --olcus_dir="data/raw_reads/" --output_dir="data/output/"
 ```
 
 See the **Usage** section below for more details on arguments.

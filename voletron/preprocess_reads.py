@@ -16,6 +16,7 @@
 from typing import Dict, Iterable, List
 import logging
 from voletron.types import AnimalName, Read, TagID, TimestampSeconds, chamberBetween
+from voletron.constants import READ_JITTER_SECONDS, READ_PARSIMONY_WINDOW_SECONDS
 
 
 def preprocess_reads(
@@ -63,7 +64,7 @@ def _spaced_reads(reads: List[Read]) -> None:
         [a, b] = reads[i : i + 2]
         b_orig = b.timestamp
 
-        if abs(b.timestamp - a.timestamp) < 0.002:
+        if abs(b.timestamp - a.timestamp) < READ_JITTER_SECONDS:
             b_new = TimestampSeconds(((a.timestamp * 1000) + 2) / 1000)  # float precision shenanigans
             b = Read(b.tag_id, b_new, b.antenna)
             reads[i + 1] = b
@@ -83,7 +84,7 @@ def _parsimonious_reads(
     count = 0
     for i in range(0, len(reads) - 4):
         [a, b, c, d] = reads[i : i + 4]
-        if abs(c.timestamp - b.timestamp) < 0.010:
+        if abs(c.timestamp - b.timestamp) < READ_PARSIMONY_WINDOW_SECONDS:
             # Middle two reads are close enough to consider swapping them, if parsimonious.
             # Each of these values is True if the read pair is parsimonious, false otherwise
             ab = a.antenna == b.antenna or (

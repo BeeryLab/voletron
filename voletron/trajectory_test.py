@@ -47,8 +47,13 @@ class TestTrajectoryUtils(unittest.TestCase):
         readA = Read(TagID("tag_a"), TimestampSeconds(12345), Antenna(ChamberName("Tube1"), ChamberName("Cage1")))
         readB = Read(TagID("tag_a"), TimestampSeconds(23456), Antenna(ChamberName("Tube3"), ChamberName("Cage3")))
 
-        with self.assertRaises(TwoMissingReadsException):
+        with self.assertRaises(TwoMissingReadsException) as cm:
             infer_missing_read(readA, readB)
+        
+        e = cm.exception
+        self.assertAlmostEqual(e.ambiguous_seconds, 11111.0)
+        self.assertEqual(e.readA, readA)
+        self.assertEqual(e.readB, readB)
 
     def test_infer_missing_tube_arena(self):
         # Note: this depends on the global apparatus_config.all_antennae

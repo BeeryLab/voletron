@@ -21,3 +21,13 @@ DEFAULT_TIME_BETWEEN_READS_THRESHOLD = 10.0
 # Small time epsilon in seconds to use when inserting inferred reads to ensure
 # correct chronological ordering.
 INFERRED_READ_EPSILON = 0.001
+
+# Threshold for considering a dwell "long" (e.g. for long stay reporting).
+# Currently set to 6 hours.
+LONG_DWELL_THRESHOLD_SECONDS = 60 * 60 * 6
+
+# Time to add to a read if it is nearly simultaneous with the previous one.
+READ_JITTER_SECONDS = 0.002
+
+# Window within which to consider swapping read order for parsimony.
+READ_PARSIMONY_WINDOW_SECONDS = 0.010

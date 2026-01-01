@@ -17,7 +17,7 @@ from typing import Dict, List, NamedTuple, NewType, Optional
 
 TagID = NewType('TagID', str)
 
-GroupID = NewType('GroupID', str)
+GroupID = NewType('GroupID', frozenset) # frozenset[TagID]
 
 AnimalName = NewType('AnimalName', str)
 

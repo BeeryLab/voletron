@@ -51,7 +51,7 @@ class TimeSpanAnalyzer:
         B+C, and A+C."""
         dwells_by_group_and_chamber: Dict[GroupID, Dict[ChamberName, list[CoDwell]]] = defaultdict(lambda: defaultdict(list))
         for d in self.co_dwells:
-            group_id : GroupID = GroupID(" ".join(sorted(d.tag_ids)))
+            group_id : GroupID = GroupID(frozenset(d.tag_ids))
             dwells_by_group_and_chamber[group_id][d.chamber].append(d)
 
         result = []
@@ -59,7 +59,7 @@ class TimeSpanAnalyzer:
             for (chamber, dwells) in chamber_dwells.items():
                 result.append(
                     GroupDwellAggregate(
-                        tag_ids=list(map(GroupID, group_id.split(' '))),  # a bit hacky
+                        tag_ids=list(group_id),
                         chamber=chamber,
                         count=len(dwells),
                         duration_seconds=_durations_sum_seconds(dwells),

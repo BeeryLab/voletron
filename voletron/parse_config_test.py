@@ -19,29 +19,29 @@ from voletron.parse_config import parse_config, parse_validation
 
 class TestParseConfig(unittest.TestCase):
     def test_parse_config_valid(self):
-        mock_data = "AnimalName, TagId, StartChamber\nMouse1, tag1, Cage1\nMouse2, tag2, Cage2"
+        mock_data = "AnimalName, TagId, StartChamber\nAnimal1, tag1, Cage1\nAnimal2, tag2, Cage2"
         with patch("builtins.open", mock_open(read_data=mock_data)):
             config = parse_config("dummy_path")
-            self.assertEqual(config.tag_id_to_name["tag1"], "Mouse1")
+            self.assertEqual(config.tag_id_to_name["tag1"], "Animal1")
             self.assertEqual(config.tag_id_to_start_chamber["tag1"], "Cage1")
-            self.assertEqual(config.tag_id_to_name["tag2"], "Mouse2")
+            self.assertEqual(config.tag_id_to_name["tag2"], "Animal2")
 
     def test_parse_config_invalid_header(self):
-        mock_data = "Wrong, Header, Here\nMouse1, tag1, Cage1"
+        mock_data = "Wrong, Header, Here\nAnimal1, tag1, Cage1"
         with patch("builtins.open", mock_open(read_data=mock_data)):
             with self.assertRaises(ValueError):
                 parse_config("dummy_path")
 
     def test_parse_config_invalid_chamber(self):
-        mock_data = "AnimalName, TagId, StartChamber\nMouse1, tag1, InvalidChamber"
+        mock_data = "AnimalName, TagId, StartChamber\nAnimal1, tag1, InvalidChamber"
         with patch("builtins.open", mock_open(read_data=mock_data)):
             with self.assertRaises(ValueError):
                 parse_config("dummy_path")
 
 class TestParseValidation(unittest.TestCase):
     def test_parse_validation_valid(self):
-        mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, Mouse1, Cage1"
-        name_to_tag = {"Mouse1": "tag1"}
+        mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, Animal1, Cage1"
+        name_to_tag = {"Animal1": "tag1"}
         timezone = pytz.timezone("UTC")
         
         with patch("builtins.open", mock_open(read_data=mock_data)):
@@ -55,8 +55,8 @@ class TestParseValidation(unittest.TestCase):
 
     def test_parse_validation_unknown_animal(self):
         # Should just skip unknown animals and print a message
-        mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, UnknownMouse, Cage1"
-        name_to_tag = {"Mouse1": "tag1"}
+        mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, UnknownAnimal, Cage1"
+        name_to_tag = {"Animal1": "tag1"}
         timezone = pytz.timezone("UTC")
         
         with patch("builtins.open", mock_open(read_data=mock_data)):

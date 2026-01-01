@@ -20,7 +20,7 @@ import heapq
 from typing import Dict, Generator, List, Iterator
 
 from voletron.apparatus_config import all_antennae
-from voletron.constants import INFERRED_READ_EPSILON
+from voletron.constants import INFERRED_READ_EPSILON, LONG_DWELL_THRESHOLD_SECONDS
 from voletron.types import CHAMBER_ERROR, CHAMBER_OUTSIDE, Antenna, ChamberName, DurationMinutes, DurationSeconds, Dwell, LongDwell, Read, TagID, TimestampSeconds, Traversal, chamberBetween
 from voletron.util import seconds_between_timestamps
 
@@ -251,7 +251,7 @@ class _AnimalTrajectory:
     def long_dwells(self) -> Generator[LongDwell, None, None]:
         for d in self.dwells:
             dwell_time = d.end - d.start
-            if dwell_time > 60 * 60 * 4:  # 6 hours
+            if dwell_time > LONG_DWELL_THRESHOLD_SECONDS:
                 yield LongDwell(self.tag_id, d.chamber, d.start, DurationMinutes(dwell_time / 60))
 
     def time_per_chamber(

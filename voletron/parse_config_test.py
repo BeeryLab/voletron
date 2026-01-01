@@ -21,7 +21,7 @@ from voletron.apparatus_config import load_apparatus_config
 class TestParseConfig(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("voletron/apparatus.json")
+        load_apparatus_config("apparatus_example.json")
 
     def test_parse_config_valid(self):
         mock_data = "AnimalName, TagId, StartChamber\nAnimal1, tag1, Cage1\nAnimal2, tag2, Cage2"
@@ -46,7 +46,7 @@ class TestParseConfig(unittest.TestCase):
 class TestParseValidation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("voletron/apparatus.json")
+        load_apparatus_config("apparatus_example.json")
 
     def test_parse_validation_valid(self):
         mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, Animal1, Cage1"

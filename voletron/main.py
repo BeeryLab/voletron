@@ -33,7 +33,7 @@ from voletron.preprocess_reads import preprocess_reads
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
-from voletron.constants import INFERRED_READ_EPSILON, DEFAULT_TIME_BETWEEN_READS_THRESHOLD
+from voletron.constants import DEFAULT_TIME_BETWEEN_READS_THRESHOLD
 from voletron.types import Config, Read, TagID, TimestampSeconds, Validation
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 
@@ -66,13 +66,7 @@ def _parse_args(argv):
         "raw*.csv files).  Note the hour is given in 24-hour time.  "
         "Default: continue to the end of the provided data.",
     )
-    parser.add_argument(
-        "--validation",
-        action=argparse.BooleanOptionalAction,
-        help="Manual validation data for the run.  "
-        "Looks in the data directory for a file called `*_Validation.csv`, "
-        "comprised of lines of the form `timestamp, animal_name, chamber`.",
-    )
+
     parser.add_argument(
         "--bin_seconds",
         type=int,
@@ -112,22 +106,53 @@ def _parse_args(argv):
     return parser.parse_args()
 
 
-def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
-    configFiles = glob.glob(os.path.join(args.olcus_dir, "*_[Cc]onfig.csv"))
-    if len(configFiles) != 1:
-        raise ValueError("Could not find exactly one `*_Config.csv` file.")
+def _find_file(directory: str, exact_name: str, suffix: str) -> str | None:
+    """Find a single file in directory matching exact_name or ending with suffix (case-insensitive).
+    
+    Returns: path to file, or None if not found.
+    Raises: ValueError if multiple files found.
+    """
+    matches = []
+    
+    exact_lower = exact_name.lower()
+    suffix_lower = suffix.lower()
 
-    config = parse_config(configFiles[0])
+    if not os.path.exists(directory):
+        return None
+
+    for filename in os.listdir(directory):
+        f_lower = filename.lower()
+        if f_lower == exact_lower or f_lower.endswith(suffix_lower):
+            matches.append(filename)
+    
+    if len(matches) == 0:
+        return None
+    elif len(matches) == 1:
+        return os.path.join(directory, matches[0])
+    
+    raise ValueError(f"Ambiguous file match. Found multiple files matching '{exact_name}' or '*{suffix}': {matches}")
+
+
+def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
+    # Look for config.csv or *_config.csv
+    configFile = _find_file(args.olcus_dir, "config.csv", "_config.csv")
+    if not configFile:
+        raise ValueError("Could not find exactly one `*_Config.csv` or `config.csv` file.")
+    
+    config = parse_config(configFile)
 
     validations: list[Validation] = []
-    if args.validation:
-        validationFiles = glob.glob(os.path.join(args.olcus_dir, "*_[Vv]alidation.csv"))
-        if len(configFiles) != 1:
-            raise ValueError("Could not find exactly one `*_Validation.csv` file.")
+    # Look for validation.csv or *_validation.csv
+    try:
+        validationFile = _find_file(args.olcus_dir, "validation.csv", "_validation.csv")
+        if validationFile:
+            logging.info(f"Found validation file: {validationFile}")
+            validations = parse_validation(
+                validationFile, {v: k for (k, v) in config.tag_id_to_name.items()}, timezone
+            )
+    except ValueError as e:
+        logging.warning(f"Validation skipped: {e}")
 
-        validations = parse_validation(
-            validationFiles[0], {v: k for (k, v) in config.tag_id_to_name.items()}, timezone
-        )
 
     olcusDir = os.path.normpath(args.olcus_dir)
 
@@ -151,7 +176,11 @@ def main(argv):
     timezone : datetime.tzinfo = pytz.timezone(args.timezone)
 
     ### Read input config and validation files
-    load_apparatus_config(os.path.join(args.olcus_dir, "apparatus.json"))
+    apparatusFile = _find_file(args.olcus_dir, "apparatus.json", "_apparatus.json")
+    if not apparatusFile:
+        raise FileNotFoundError(f"Could not find apparatus config file (apparatus.json or *_apparatus.json) in {args.olcus_dir}")
+    
+    load_apparatus_config(apparatusFile)
     config, validations, olcusDir = _parse_config(args, timezone)
     
     ### Read raw data
@@ -179,7 +208,7 @@ def main(argv):
         analysis_start_time,
         analysis_end_time,
         validations,
-        args.validation,
+        len(validations) > 0,
         args.bin_seconds,
         # args.habitat_time_offset_seconds,
     )

@@ -27,28 +27,30 @@ the total duration that two given animals were in the same chamber
 ("cohabitation"), the distribution of group sizes (number of animals in the same
 chamber) over time, and so forth.
 
-## Quick Start (Beginners)
-
-If you are new to Python, follow these steps to get running.
+## Quick Start
 
 ### 1. Install Phase
 
 **1. Install Python**
+
 You need Python 3 installed. We recommend the latest version (e.g., Python 3.9, 3.10, or newer).
 -   **Mac**: [Download Python for Mac](https://www.python.org/downloads/mac-osx/)
 -   **Windows**: [Download Python for Windows](https://www.python.org/downloads/windows/) (Check "Add Python to PATH" during installation)
 
 **2. Open your Terminal**
+
 -   **Mac**: Open the "Terminal" app.
 -   **Windows**: Open "Command Prompt" or "PowerShell".
 
 **3. Navigate to this folder**
+
 Use the `cd` command to go to the folder containing this README.
 ```bash
 cd /path/to/voletron
 ```
 
 **4. Set up a "Virtual Environment" (Optional but Recommended)**
+
 This keeps the project dependencies isolated from your other files.
 ```bash
 # Mac/Linux
@@ -61,13 +63,45 @@ venv\Scripts\activate.bat
 ```
 
 **5. Install Dependencies**
+
 This project requires `pytz` for timezone handling.
 ```bash
 pip install pytz
 ```
 *(There is no need to run setup.py install)*
 
-### 2. Running the Code
+### 2. Prepare your data
+Voletron analyzes one experiment at a time. Create a folder (e.g., `data/my_experiment/`) and place the following files inside:
+
+**A. Raw Data from OLCUS**
+-   A flat directory of `.csv` files (e.g., `raw_data_001.csv`, `raw_data_002.csv`).
+-   Format: `cantimestamp; datetimestamp; deviceid; antennaID; data`.
+
+**B. Configuration File**
+-   CSV file mapping animals to RFID tags and start locations.
+-   Accepted names: `config.csv` OR `*_config.csv` (case-insensitive).
+-   **Columns**: `AnimalName, TagId, StartChamber`
+```csv
+AnimalName, TagId, StartChamber
+Vole1, 982000356123456, Cage1
+Vole2, 982000356654321, CentralA
+```
+
+**C. Apparatus Configuration**
+-   Describes the hardware layout (which antenna ID maps to which chamber).
+-   Accepted names: `apparatus.json` OR `*_apparatus.json` (case-insensitive).
+-   See `apparatus_example.json` in this repo for the structure.
+
+**D. (Optional) Validation File**
+-   Ground truth observations for manual validation.
+-   Accepted names: `validation.csv` OR `*_validation.csv` (case-insensitive).
+-   **Columns**: `Timestamp, AnimalID, Chamber`
+```csv
+Timestamp, AnimalID, Chamber
+13.09.2020 12:00, Vole1, Tube1
+```
+
+### 3. Running the Code
 
 To run Voletron, use the following command structure from the main folder:
 

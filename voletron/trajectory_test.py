@@ -31,7 +31,7 @@ from voletron.apparatus_config import load_apparatus_config
 class TestTrajectoryUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("voletron/apparatus.json")
+        load_apparatus_config("apparatus_example.json")
 
     def test_chamber_between(self):
         ab = Antenna(ChamberName("ChamberA"), ChamberName("ChamberB"))
@@ -84,7 +84,7 @@ class TestTrajectoryUtils(unittest.TestCase):
 class TestAnimalTrajectory(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("voletron/apparatus.json")
+        load_apparatus_config("apparatus_example.json")
 
     def test_init_dwell(self):
         t = _AnimalTrajectory(TagID("tag_a"), ChamberName("CentralA"), TimestampSeconds(12345), 10.0)
@@ -371,7 +371,7 @@ class TestAnimalTrajectory(unittest.TestCase):
 class TestAllAnimalTrajectories(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        load_apparatus_config("voletron/apparatus.json")
+        load_apparatus_config("apparatus_example.json")
 
     def test_traversals(self):
         start_time = TimestampSeconds(100)

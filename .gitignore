@@ -92,3 +92,6 @@ eclipse
 .project
 
 settings.json
+
+# Virtual Environment
+venv/

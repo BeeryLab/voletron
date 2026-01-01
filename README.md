@@ -1,6 +1,6 @@
 # Voletron
 
-Voletron is an application for tracking animals (or other moving objects) as
+Voletron is an application for tracking animals as
 they move through a laboratory habitat monitored by radio frequency
 identification (RFID) antennas. Individuals are uniquely identified by passive
 integrated transponders (PIT tags). These tags are not powered, but are
@@ -27,7 +27,64 @@ the total duration that two given animals were in the same chamber
 ("cohabitation"), the distribution of group sizes (number of animals in the same
 chamber) over time, and so forth.
 
-## Installation
+## Quick Start (Beginners)
+
+If you are new to Python, follow these steps to get running.
+
+### 1. Install Phase
+
+**1. Install Python**
+You need Python 3 installed. We recommend the latest version (e.g., Python 3.9, 3.10, or newer).
+-   **Mac**: [Download Python for Mac](https://www.python.org/downloads/mac-osx/)
+-   **Windows**: [Download Python for Windows](https://www.python.org/downloads/windows/) (Check "Add Python to PATH" during installation)
+
+**2. Open your Terminal**
+-   **Mac**: Open the "Terminal" app.
+-   **Windows**: Open "Command Prompt" or "PowerShell".
+
+**3. Navigate to this folder**
+Use the `cd` command to go to the folder containing this README.
+```bash
+cd /path/to/voletron
+```
+
+**4. Set up a "Virtual Environment" (Optional but Recommended)**
+This keeps the project dependencies isolated from your other files.
+```bash
+# Mac/Linux
+python3 -m venv venv
+source venv/bin/activate
+
+# Windows
+python -m venv venv
+venv\Scripts\activate.bat
+```
+
+**5. Install Dependencies**
+This project requires `pytz` for timezone handling.
+```bash
+pip install pytz
+```
+*(There is no need to run setup.py install)*
+
+### 2. Running the Code
+
+To run Voletron, use the following command structure from the main folder:
+
+```bash
+python -m voletron.main [ARGUMENTS]
+```
+
+**Example:**
+```bash
+python -m voletron.main --config_file="my_config.csv" --raw_dir="data/raw_reads/" --output_dir="data/output/"
+```
+
+See the **Usage** section below for more details on arguments.
+
+---
+
+## Installation (Advanced Users)
 
 Voletron can be executed directly:
 

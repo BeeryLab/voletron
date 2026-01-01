@@ -15,16 +15,17 @@
 
 import os
 from typing import List, Tuple
-from voletron.types import Config, TagID, TimestampSeconds, DurationSeconds
+from voletron.types import AnimalName, ChamberName, Config, DurationMinutes, LongDwell, TagID, TimestampSeconds, DurationSeconds
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
-from voletron.output.types import LongDwellRow
+from voletron.output.types import LongDwellRow, OutputBin
+
 
 def compute_long_dwells(
     config: Config,
     tag_ids: List[TagID],
     trajectories: AllAnimalTrajectories,
-    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
+    bins: List[OutputBin],
 ) -> List[LongDwellRow]:
     rows = []
     
@@ -39,7 +40,9 @@ def compute_long_dwells(
             # Let's check previous code: `config.tag_id_to_name[d[0]]`. Yes.
             all_dwells.append(d)
 
-    for (b_start, b_end) in bins:
+    for bin in bins:
+        b_start = bin.start
+        b_end = bin.end
         for d in all_dwells:
             # d: (tag_id, chamber, start_time, duration)
             start_time = d[2]

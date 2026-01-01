@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from voletron.output.write_long_dwells import compute_long_dwells, write_long_dwells
 from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName
 from voletron.trajectory import AllAnimalTrajectories
-from voletron.output.types import LongDwellRow
+from voletron.output.types import LongDwellRow, OutputBin
 
 class TestWriteLongDwells(unittest.TestCase):
     def test_compute_long_dwells(self):
@@ -29,9 +29,9 @@ class TestWriteLongDwells(unittest.TestCase):
         tag_ids = [TagID("tag1")]
         
         bins = [
-            (TimestampSeconds(0), TimestampSeconds(10)),
-            (TimestampSeconds(10), TimestampSeconds(20)),
-            (TimestampSeconds(0), TimestampSeconds(30)) # Whole
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=MagicMock()),
+            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=MagicMock()),
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(30), analyzer=MagicMock()) # Whole
         ]
 
         rows = compute_long_dwells(config, tag_ids, mock_trajectories, bins)

@@ -14,7 +14,14 @@
 
 from dataclasses import dataclass
 from typing import Dict, List, Union, Set
-from voletron.types import TimestampSeconds, DurationSeconds
+from voletron.types import TimestampSeconds
+from voletron.time_span_analyzer import TimeSpanAnalyzer
+
+@dataclass
+class OutputBin:
+    start: TimestampSeconds
+    end: TimestampSeconds
+    analyzer: TimeSpanAnalyzer
 
 @dataclass
 class ChamberTimeRow:

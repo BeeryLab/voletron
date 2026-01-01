@@ -15,20 +15,23 @@
 
 import os
 from typing import List, Dict, Tuple
-from voletron.time_span_analyzer import TimeSpanAnalyzer
+
 from voletron.types import AnimalName, TagID, CoDwell, TimestampSeconds, DurationSeconds
-from voletron.output.types import GroupChamberCohabRow
+from voletron.output.types import GroupChamberCohabRow, OutputBin
 
 def compute_group_chamber_cohabs(
     tag_ids: List[TagID],
-    co_dwells: List[CoDwell],
     tag_id_to_name: Dict[TagID, AnimalName],
-    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
+    bins: List[OutputBin],
 ) -> List[GroupChamberCohabRow]:
     rows = []
     
-    for (start, end) in bins:
-        analyzer = TimeSpanAnalyzer(co_dwells, start, end)
+    for bin in bins:
+        if bin.analyzer is None:
+            continue
+        analyzer = bin.analyzer
+        start = bin.start
+        end = bin.end
         for group_dwell_aggregate in analyzer.get_group_chamber_exclusive_durations():
             # Skip groups with tag_ids not in the requested list
             if not all(tag_id in tag_ids for tag_id in group_dwell_aggregate.tag_ids):

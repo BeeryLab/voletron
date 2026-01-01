@@ -16,20 +16,24 @@
 import os
 from collections import defaultdict
 from typing import List, Dict, Union, Tuple
-from voletron.time_span_analyzer import TimeSpanAnalyzer
+
 from voletron.types import AnimalName, DurationSeconds, TagID, CoDwell, TimestampSeconds
-from voletron.output.types import GroupSizeRow
+from voletron.output.types import GroupSizeRow, OutputBin
 
 def compute_group_sizes(
     tag_ids: List[TagID],
-    co_dwells: List[CoDwell],
     tag_id_to_name: Dict[TagID, AnimalName],
-    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
+    bins: List[OutputBin],
 ) -> List[GroupSizeRow]:
     rows = []
     
-    for (start, end) in bins:
-        analyzer = TimeSpanAnalyzer(co_dwells, start, end)
+    for bin in bins:
+        if bin.analyzer is None:
+            continue
+        analyzer = bin.analyzer
+        start = bin.start
+        end = bin.end
+        
         tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = defaultdict(lambda: [DurationSeconds(0)] * 9)
 
         for group_dwell in analyzer.get_group_chamber_exclusive_durations():

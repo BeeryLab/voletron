@@ -18,17 +18,19 @@ import math
 from typing import List, Tuple
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.types import ChamberName, Config, TagID, TimestampSeconds, DurationSeconds
-from voletron.output.types import ChamberTimeRow
+from voletron.output.types import ChamberTimeRow, OutputBin
 
 def compute_chamber_times(
     config: Config,
     tag_ids: List[TagID],
     trajectories: AllAnimalTrajectories,
-    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
+    bins: List[OutputBin],
 ) -> List[ChamberTimeRow]:
     rows = []
     
-    for (b_start, b_end) in bins:
+    for bin in bins:
+        b_start = bin.start
+        b_end = bin.end
         for (tag_id, trajectory) in trajectories.animalTrajectories.items():
             if not tag_id in tag_ids:
                 continue

@@ -19,19 +19,21 @@ from typing import List, Dict, Set, Tuple
 from voletron.types import AnimalName, TagID, Validation, TimestampSeconds, DurationSeconds
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
-from voletron.output.types import ValidationRow
+from voletron.output.types import ValidationRow, OutputBin
 
 def compute_validation(
     tag_ids: List[TagID],
     trajectories: AllAnimalTrajectories,
     tag_id_to_name: Dict[TagID, AnimalName],
     validations: List[Validation],
-    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
+    bins: List[OutputBin],
 ) -> List[ValidationRow]:
     rows = []
     relevant_validations = [vv for vv in validations if vv.tag_id in tag_ids]
     
-    for (b_start, b_end) in bins:
+    for bin in bins:
+        b_start = bin.start
+        b_end = bin.end
         for v in relevant_validations:
             if v.timestamp >= b_start and v.timestamp < b_end:
                 # Charitably use a 2-minute window. Note: this logic looks at trajectory

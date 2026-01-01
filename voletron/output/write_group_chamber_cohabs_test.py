@@ -5,7 +5,7 @@ import os
 from unittest.mock import MagicMock
 from voletron.output.write_group_chamber_cohabs import compute_group_chamber_cohabs, write_group_chamber_cohabs
 from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName, CoDwell
-from voletron.output.types import GroupChamberCohabRow
+from voletron.output.types import GroupChamberCohabRow, OutputBin
 
 class TestWriteGroupChamberCohabs(unittest.TestCase):
     def test_compute_group_chamber_cohabs(self):
@@ -26,15 +26,34 @@ class TestWriteGroupChamberCohabs(unittest.TestCase):
             )
         ]
         
+        # Mocks
+        mock_analyzer_1 = MagicMock()
+        mock_analyzer_1.get_group_chamber_exclusive_durations.return_value = [
+            MagicMock(tag_ids=[TagID("tag1"), TagID("tag2")], chamber=ChamberName("c1"), count=1, duration_seconds=5.0)
+        ]
+        mock_analyzer_1.duration = 10.0
+        
+        mock_analyzer_2 = MagicMock()
+        mock_analyzer_2.get_group_chamber_exclusive_durations.return_value = [
+            MagicMock(tag_ids=[TagID("tag1"), TagID("tag2")], chamber=ChamberName("c1"), count=1, duration_seconds=5.0)
+        ]
+        mock_analyzer_2.duration = 10.0
+        
+        mock_analyzer_3 = MagicMock()
+        mock_analyzer_3.get_group_chamber_exclusive_durations.return_value = [
+            MagicMock(tag_ids=[TagID("tag1"), TagID("tag2")], chamber=ChamberName("c1"), count=1, duration_seconds=10.0)
+        ]
+        mock_analyzer_3.duration = 20.0 # Wait, Bin 3 was 0-20?
+        
         bins = [
-            (TimestampSeconds(0), TimestampSeconds(10)),
-            (TimestampSeconds(10), TimestampSeconds(20)),
-            (TimestampSeconds(0), TimestampSeconds(20))
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=mock_analyzer_1),
+            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=mock_analyzer_2),
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(20), analyzer=mock_analyzer_3)
         ]
 
         tag_ids = [TagID("tag1"), TagID("tag2")]
 
-        rows = compute_group_chamber_cohabs(tag_ids, co_dwells, tag_id_to_name, bins)
+        rows = compute_group_chamber_cohabs(tag_ids, tag_id_to_name, bins)
 
         # Expected same as pair cohabs basically but different row structure
         self.assertEqual(len(rows), 3)

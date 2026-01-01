@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from voletron.output.write_validation import compute_validation, write_validation
 from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName, Validation
 from voletron.trajectory import AllAnimalTrajectories
-from voletron.output.types import ValidationRow
+from voletron.output.types import ValidationRow, OutputBin
 
 class TestWriteValidation(unittest.TestCase):
     def test_compute_validation(self):
@@ -45,9 +45,9 @@ class TestWriteValidation(unittest.TestCase):
         tag_ids = [TagID("tag1")]
         
         bins = [
-            (TimestampSeconds(0), TimestampSeconds(10)),
-            (TimestampSeconds(10), TimestampSeconds(20)),
-            (TimestampSeconds(0), TimestampSeconds(20))
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=MagicMock()),
+            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=MagicMock()),
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(20), analyzer=MagicMock())
         ]
 
         rows = compute_validation(tag_ids, mock_trajectories, tag_id_to_name, validations, bins)

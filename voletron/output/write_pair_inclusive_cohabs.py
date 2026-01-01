@@ -15,28 +15,32 @@
 
 import os
 from typing import List, Tuple
-from voletron.time_span_analyzer import TimeSpanAnalyzer
+
 from voletron.types import Config, CoDwell, TimestampSeconds, DurationSeconds
-from voletron.output.types import PairCohabRow
+from voletron.output.types import PairCohabRow, OutputBin
 
 def compute_pair_inclusive_cohabs(
     config: Config,
-    co_dwells: List[CoDwell],
-    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
+    bins: List[OutputBin],
 ) -> List[PairCohabRow]:
     rows = []
     
-    for (start, end) in bins:
-        analyzer = TimeSpanAnalyzer(co_dwells, start, end)
-        for codwell_aggregate in analyzer.get_pair_inclusive_stats():
-            animal_a, animal_b = codwell_aggregate.tag_ids
+    for bin in bins:
+        if bin.analyzer is None:
+             continue
+        analyzer = bin.analyzer
+        start = bin.start
+        end = bin.end
+        
+        for pair_dwell_aggregate in analyzer.get_pair_inclusive_stats():
+            animal_a, animal_b = pair_dwell_aggregate.tag_ids
             rows.append(PairCohabRow(
                 bin_start=start,
                 bin_end=end,
                 animal_a_name=config.tag_id_to_name[animal_a],
                 animal_b_name=config.tag_id_to_name[animal_b],
-                dwell_count=codwell_aggregate.count,
-                duration_seconds=codwell_aggregate.duration_seconds,
+                dwell_count=pair_dwell_aggregate.count,
+                duration_seconds=pair_dwell_aggregate.duration_seconds,
                 bin_duration=analyzer.duration,
             ))
     return rows

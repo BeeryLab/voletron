@@ -5,7 +5,7 @@ import os
 from unittest.mock import MagicMock
 from voletron.output.write_pair_inclusive_cohabs import compute_pair_inclusive_cohabs, write_pair_inclusive_cohabs
 from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName, CoDwell
-from voletron.output.types import PairCohabRow
+from voletron.output.types import PairCohabRow, OutputBin
 
 class TestWritePairInclusiveCohabs(unittest.TestCase):
     def test_compute_pair_inclusive_cohabs(self):
@@ -27,13 +27,35 @@ class TestWritePairInclusiveCohabs(unittest.TestCase):
             )
         ]
         
+        # Mocks for analyzers
+        # Bin 1
+        mock_analyzer_1 = MagicMock()
+        mock_analyzer_1.get_pair_inclusive_stats.return_value = [
+            MagicMock(tag_ids=[TagID("tag1"), TagID("tag2")], count=1, duration_seconds=5.0)
+        ]
+        mock_analyzer_1.duration = 10.0
+        
+        # Bin 2
+        mock_analyzer_2 = MagicMock()
+        mock_analyzer_2.get_pair_inclusive_stats.return_value = [
+            MagicMock(tag_ids=[TagID("tag1"), TagID("tag2")], count=1, duration_seconds=5.0)
+        ]
+        mock_analyzer_2.duration = 10.0
+        
+        # Bin 3
+        mock_analyzer_3 = MagicMock()
+        mock_analyzer_3.get_pair_inclusive_stats.return_value = [
+             MagicMock(tag_ids=[TagID("tag1"), TagID("tag2")], count=1, duration_seconds=10.0)
+        ]
+        mock_analyzer_3.duration = 20.0
+        
         bins = [
-            (TimestampSeconds(0), TimestampSeconds(10)),
-            (TimestampSeconds(10), TimestampSeconds(20)),
-            (TimestampSeconds(0), TimestampSeconds(20))
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=mock_analyzer_1),
+            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=mock_analyzer_2),
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(20), analyzer=mock_analyzer_3)
         ]
 
-        rows = compute_pair_inclusive_cohabs(config, co_dwells, bins)
+        rows = compute_pair_inclusive_cohabs(config, bins)
 
         # Bin 1 (0-10): Overlap is 5 to 10. Duration 5.
         # Bin 2 (10-20): Overlap is 10 to 15. Duration 5.

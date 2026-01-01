@@ -22,6 +22,7 @@ from voletron.output.write_group_sizes import write_group_sizes, compute_group_s
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Traversal, DurationSeconds
+from voletron.output.types import OutputBin
 
 # TODO write all the tests
 
@@ -44,20 +45,34 @@ class TestWriteGroupSizes(unittest.TestCase):
         state = CoDwellAccumulator(analysis_start_time, tag_id_to_start_chamber, [ChamberName("chamber_1"), ChamberName("chamber_2")])
         for t in traversals:
             state.update_state_from_traversal(t)
-        co_dwells = state.end(TimestampSeconds(300))
-        # analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time) # Not needed to pass analyzer anymore
+        bin_start = TimestampSeconds(0)
+        bin_end = TimestampSeconds(100)
+        mock_analyzer = MagicMock()
+        # We need to mock get_group_chamber_exclusive_durations because that's what compute_group_sizes uses now.
+        # It aggregates durations per group size.
+        # Logic:
+        # tag_id_group_size_seconds[tag_id][len(group_dwell.tag_ids)] += duration
         
-        bins = [
-            (TimestampSeconds(100), TimestampSeconds(200)), # bin_seconds=300, analysis start=100, end=200. End is min(100+300, 200) = 200.
-            (TimestampSeconds(100), TimestampSeconds(200)) # "whole experiment" bin
-        ]
+        # We want foo to have size 1 (50s) and size 2 (50s)
+        # We want bar to have size 2 (50s) and size 3 (50s)
+        
+        dwells = []
+        # Foo alone (size 1)
+        dwells.append(MagicMock(tag_ids=[TagID("foo")], duration_seconds=100.0))
+        # Bar alone (size 1)
+        dwells.append(MagicMock(tag_ids=[TagID("bar")], duration_seconds=100.0))
+        
+        mock_analyzer.get_group_chamber_exclusive_durations.return_value = dwells
+        mock_analyzer.duration = 100.0
+        
+        bins = [OutputBin(start=bin_start, end=bin_end, analyzer=mock_analyzer)]
 
         rows = compute_group_sizes(
             tag_ids, 
-            co_dwells, 
             tag_id_to_name,
             bins
         )
+        
         # bin_start,bin_end,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time,bin_duration)
         write_group_sizes(rows, out_dir, exp_name)
 

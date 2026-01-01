@@ -5,6 +5,7 @@ import os
 from unittest.mock import MagicMock
 from voletron.output.write_chamber_times import compute_chamber_times, write_chamber_times
 from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName, DurationSeconds
+from voletron.output.types import OutputBin
 from voletron.trajectory import AllAnimalTrajectories
 
 class TestWriteChamberTimes(unittest.TestCase):
@@ -36,9 +37,9 @@ class TestWriteChamberTimes(unittest.TestCase):
         tag_ids = [TagID("tag1")]
         
         bins = [
-            (TimestampSeconds(0), TimestampSeconds(10)),
-            (TimestampSeconds(10), TimestampSeconds(20)),
-            (TimestampSeconds(0), TimestampSeconds(20))
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=MagicMock()),
+            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=MagicMock()),
+            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(20), analyzer=MagicMock())
         ]
 
         rows = compute_chamber_times(config, tag_ids, mock_trajectories, bins)
@@ -72,7 +73,7 @@ class TestWriteChamberTimes(unittest.TestCase):
         # We need to import ChamberTimeRow, but it's not exported by write_chamber_times directly usually,
         # but compute_chamber_times returns them.
         # Actually it is imported in write_chamber_times.py
-        from voletron.output.types import ChamberTimeRow
+        from voletron.output.types import ChamberTimeRow, OutputBin
         
         rows = [
              ChamberTimeRow(

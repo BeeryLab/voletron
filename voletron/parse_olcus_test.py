@@ -18,9 +18,14 @@ import pytz
 
 from voletron.parse_olcus import parse_raw_line
 from voletron.types import Read
+from voletron.apparatus_config import load_apparatus_config
 
 
 class TestParse(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        load_apparatus_config("voletron/apparatus.json")
+
     def test_parse_raw_line(self):
         line = "3168630996;05.03.2020 16:14:11:796;0;0;972273000584934"
         timezone = pytz.timezone("US/Pacific")

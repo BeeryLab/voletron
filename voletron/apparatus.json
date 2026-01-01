@@ -1,0 +1,133 @@
+{
+    "_comment": [
+        "Maps the Olcus ID of each antenna to an Antenna object representing its",
+        "location in the apparatus.  Each tube has two antennae; the second field of",
+        "the Antenna object gives the string ID of the chamber to which that end of",
+        "the tube is connected.",
+        "",
+        "Note this implicitly describes the physical layout of the apparatus.",
+        "In particular, one recording setup reads data from two disconnected habitats:",
+        "One in which Cages 1-5 all connect to CentralA, and a second in which Cages",
+        "6-10 connect to CentralB."
+    ],
+    "olcus_devices": {
+        "0": {
+            "0": {
+                "tube": "Tube1",
+                "cage": "CentralA"
+            },
+            "1": {
+                "tube": "Tube1",
+                "cage": "Cage1"
+            },
+            "2": {
+                "tube": "Tube2",
+                "cage": "CentralA"
+            },
+            "3": {
+                "tube": "Tube2",
+                "cage": "Cage2"
+            },
+            "4": {
+                "tube": "Tube3",
+                "cage": "CentralA"
+            },
+            "5": {
+                "tube": "Tube3",
+                "cage": "Cage3"
+            }
+        },
+        "1": {
+            "0": {
+                "tube": "Tube4",
+                "cage": "CentralA"
+            },
+            "1": {
+                "tube": "Tube4",
+                "cage": "Cage4"
+            },
+            "2": {
+                "tube": "Tube5",
+                "cage": "CentralA"
+            },
+            "3": {
+                "tube": "Tube5",
+                "cage": "Cage5"
+            },
+            "4": {
+                "tube": "Tube6",
+                "cage": "CentralB"
+            },
+            "5": {
+                "tube": "Tube6",
+                "cage": "Cage6"
+            }
+        },
+        "2": {
+            "0": {
+                "tube": "Tube7",
+                "cage": "CentralB"
+            },
+            "1": {
+                "tube": "Tube7",
+                "cage": "Cage7"
+            },
+            "2": {
+                "tube": "Tube8",
+                "cage": "CentralB"
+            },
+            "3": {
+                "tube": "Tube8",
+                "cage": "Cage8"
+            },
+            "4": {
+                "tube": "Tube9",
+                "cage": "CentralB"
+            },
+            "5": {
+                "tube": "Tube9",
+                "cage": "Cage9"
+            }
+        },
+        "3": {
+            "0": {
+                "tube": "Tube10",
+                "cage": "CentralB"
+            },
+            "1": {
+                "tube": "Tube10",
+                "cage": "Cage10"
+            }
+        }
+    },
+    "habitats": {
+        "HabitatA": [
+            "CentralA",
+            "Cage1",
+            "Tube1",
+            "Cage2",
+            "Tube2",
+            "Cage3",
+            "Tube3",
+            "Cage4",
+            "Tube4",
+            "Cage5",
+            "Tube5",
+            "Error"
+        ],
+        "HabitatB": [
+            "CentralB",
+            "Cage6",
+            "Tube6",
+            "Cage7",
+            "Tube7",
+            "Cage8",
+            "Tube8",
+            "Cage9",
+            "Tube9",
+            "Cage10",
+            "Tube10",
+            "Error"
+        ]
+    }
+}

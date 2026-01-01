@@ -16,88 +16,59 @@
 from typing import List, Dict
 from voletron.types import CHAMBER_ERROR, Antenna, HabitatName, ChamberName
 
-# TODO: consider how to represent the apparatus config as data (e.g., json), not as
-# code.
+import json
+import os
 
-# Maps the Olcus ID of each antenna to an Antenna object representing its
-# location in the apparatus.  Each tube has two antennae; the second field of
-# the Antenna object gives the string ID of the chamber to which that end of
-# the tube is connected.
-#
-# Note this implicitly describes the physical layout of the apparatus.
-# In particular, one recording setup reads data from two disconnected habitats:
-# One in which Cages 1-5 all connect to CentralA, and a second in which Cages
-# 6-10 connect to CentralB.
-olcus_id_to_antenna_hardcode = {
-    0: {  # device 0
-        0: Antenna(ChamberName("Tube1"), ChamberName("CentralA")),
-        1: Antenna(ChamberName("Tube1"), ChamberName("Cage1")),
-        2: Antenna(ChamberName("Tube2"), ChamberName("CentralA")),
-        3: Antenna(ChamberName("Tube2"), ChamberName("Cage2")),
-        4: Antenna(ChamberName("Tube3"), ChamberName("CentralA")),
-        5: Antenna(ChamberName("Tube3"), ChamberName("Cage3")),
-    },
-    1: {  # device 1
-        0: Antenna(ChamberName("Tube4"), ChamberName("CentralA")),
-        1: Antenna(ChamberName("Tube4"), ChamberName("Cage4")),
-        2: Antenna(ChamberName("Tube5"), ChamberName("CentralA")),
-        3: Antenna(ChamberName("Tube5"), ChamberName("Cage5")),
-        4: Antenna(ChamberName("Tube6"), ChamberName("CentralB")),
-        5: Antenna(ChamberName("Tube6"), ChamberName("Cage6")),
-    },
-    2: {  # device 2
-        0: Antenna(ChamberName("Tube7"), ChamberName("CentralB")),
-        1: Antenna(ChamberName("Tube7"), ChamberName("Cage7")),
-        2: Antenna(ChamberName("Tube8"), ChamberName("CentralB")),
-        3: Antenna(ChamberName("Tube8"), ChamberName("Cage8")),
-        4: Antenna(ChamberName("Tube9"), ChamberName("CentralB")),
-        5: Antenna(ChamberName("Tube9"), ChamberName("Cage9")),
-    },
-    3: {
-        0: Antenna(ChamberName("Tube10"), ChamberName("CentralB")),
-        1: Antenna(ChamberName("Tube10"), ChamberName("Cage10")),
-    },  # device 3
-}
+# Globals are initially empty and populated by load_apparatus_config
+olcus_id_to_antenna_hardcode = {}
+apparatus_chambers: Dict[HabitatName, List[ChamberName]] = {}
+all_antennae = []
+all_chambers = []
 
-# This could be derived from the above, but I'm lazy
-apparatus_chambers : Dict[HabitatName, List[ChamberName]] = {
-    HabitatName("HabitatA"): [
-        ChamberName("CentralA"),
-        ChamberName("Cage1"),
-        ChamberName("Tube1"),
-        ChamberName("Cage2"),
-        ChamberName("Tube2"),
-        ChamberName("Cage3"),
-        ChamberName("Tube3"),
-        ChamberName("Cage4"),
-        ChamberName("Tube4"),
-        ChamberName("Cage5"),
-        ChamberName("Tube5"),
-        CHAMBER_ERROR,
-    ],
-    HabitatName("HabitatB"): [
-        ChamberName("CentralB"),
-        ChamberName("Cage6"),
-        ChamberName("Tube6"),
-        ChamberName("Cage7"),
-        ChamberName("Tube7"),
-        ChamberName("Cage8"),
-        ChamberName("Tube8"),
-        ChamberName("Cage9"),
-        ChamberName("Tube9"),
-        ChamberName("Cage10"),
-        ChamberName("Tube10"),
-        CHAMBER_ERROR,
-    ],
-}
+def load_apparatus_config(json_path: str):
+    """
+    Loads apparatus configuration from a JSON file and populates the module-level
+    globals. This function mutates the globals in-place so that imported references
+    remain valid.
+    """
+    if not os.path.exists(json_path):
+         raise FileNotFoundError(f"Could not find apparatus config file: {json_path}")
+    
+    with open(json_path, 'r') as f:
+        _config = json.load(f)
 
-all_antennae = [
-    antenna
-    for (device, antennae) in olcus_id_to_antenna_hardcode.items()
-    for (index, antenna) in antennae.items()
-]
+    # 1. Parse olcus_devices
+    # Clear existing data to support re-loading (e.g. in tests)
+    olcus_id_to_antenna_hardcode.clear()
+    
+    for device_id_str, antennae_dict in _config["olcus_devices"].items():
+        device_id = int(device_id_str)
+        olcus_id_to_antenna_hardcode[device_id] = {}
+        for antenna_id_str, antenna_data in antennae_dict.items():
+            antenna_id = int(antenna_id_str)
+            olcus_id_to_antenna_hardcode[device_id][antenna_id] = Antenna(
+                ChamberName(antenna_data["tube"]), ChamberName(antenna_data["cage"])
+            )
 
-all_chambers = sorted(
-    list(set([item for a in all_antennae for item in [a.tube, a.cage]]))
-)
-all_chambers.append(CHAMBER_ERROR)
+    # 2. Parse habitats
+    apparatus_chambers.clear()
+    for habitat_name, chambers in _config["habitats"].items():
+        apparatus_chambers[HabitatName(str(habitat_name))] = [
+            ChamberName(c) if c != "Error" else CHAMBER_ERROR for c in chambers
+        ]
+
+    # 3. Derive all_antennae
+    all_antennae.clear()
+    all_antennae.extend([
+        antenna
+        for (device, antennae) in olcus_id_to_antenna_hardcode.items()
+        for (index, antenna) in antennae.items()
+    ])
+
+    # 4. Derive all_chambers
+    all_chambers.clear()
+    _chambers = sorted(
+        list(set([item for a in all_antennae for item in [a.tube, a.cage]]))
+    )
+    all_chambers.extend(_chambers)
+    all_chambers.append(CHAMBER_ERROR)

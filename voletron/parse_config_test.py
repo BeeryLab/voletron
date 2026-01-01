@@ -16,8 +16,13 @@ import unittest
 from unittest.mock import patch, mock_open
 import pytz
 from voletron.parse_config import parse_config, parse_validation
+from voletron.apparatus_config import load_apparatus_config
 
 class TestParseConfig(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        load_apparatus_config("voletron/apparatus.json")
+
     def test_parse_config_valid(self):
         mock_data = "AnimalName, TagId, StartChamber\nAnimal1, tag1, Cage1\nAnimal2, tag2, Cage2"
         with patch("builtins.open", mock_open(read_data=mock_data)):
@@ -39,6 +44,10 @@ class TestParseConfig(unittest.TestCase):
                 parse_config("dummy_path")
 
 class TestParseValidation(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        load_apparatus_config("voletron/apparatus.json")
+
     def test_parse_validation_valid(self):
         mock_data = "Timestamp, AnimalID, Chamber\n13.09.2020 12:00, Animal1, Cage1"
         name_to_tag = {"Animal1": "tag1"}

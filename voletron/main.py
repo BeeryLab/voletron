@@ -26,7 +26,7 @@ from voletron.output.output import write_outputs
 
 # Removed sys.path hack. Please run as python -m voletron.main
 
-from voletron.apparatus_config import all_chambers
+from voletron.apparatus_config import all_chambers, load_apparatus_config
 from voletron.parse_config import parse_config, parse_validation
 from voletron.parse_olcus import parse_first_read, parse_raw_dir
 from voletron.preprocess_reads import preprocess_reads
@@ -107,6 +107,11 @@ def _parse_args(argv):
         default=DEFAULT_TIME_BETWEEN_READS_THRESHOLD,
         help="Time in seconds between reads to switch from short dwell (tube) to long dwell (cage/arena). Default: {}".format(DEFAULT_TIME_BETWEEN_READS_THRESHOLD)
     )
+    parser.add_argument(
+        "--apparatus_config",
+        default="voletron/apparatus.json",
+        help="Path to the apparatus configuration JSON file. Default: 'voletron/apparatus.json'"
+    )
     return parser.parse_args()
 
 
@@ -141,9 +146,11 @@ def main(argv):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format='%(message)s')
 
     logging.info("===================================")
-    logging.info("Voletron v2.0, 2025-12-21")
+    logging.info("Voletron v2.1, 2026-01-01")
     logging.info("http://github.com/beerylab/voletron")
     logging.info("===================================")
+
+    load_apparatus_config(args.apparatus_config)
 
     timezone : datetime.tzinfo = pytz.timezone(args.timezone)
 

@@ -4,7 +4,7 @@ import tempfile
 import os
 from unittest.mock import MagicMock
 from voletron.output.write_pair_inclusive_cohabs import compute_pair_inclusive_cohabs, write_pair_inclusive_cohabs
-from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName, CoDwell
+from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName
 from voletron.output.types import PairCohabRow, OutputBin
 
 class TestWritePairInclusiveCohabs(unittest.TestCase):
@@ -16,16 +16,7 @@ class TestWritePairInclusiveCohabs(unittest.TestCase):
             TagID("tag2"): AnimalName("animal2")
         }
         
-        # CoDwells
-        # Tag1 and Tag2 together in c1 from 5 to 15.
-        co_dwells = [
-            CoDwell(
-                tag_ids=frozenset([TagID("tag1"), TagID("tag2")]),
-                start=TimestampSeconds(5),
-                end=TimestampSeconds(15),
-                chamber=ChamberName("c1")
-            )
-        ]
+
         
         # Mocks for analyzers
         # Bin 1

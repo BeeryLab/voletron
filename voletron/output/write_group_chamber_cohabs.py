@@ -14,9 +14,9 @@
 
 
 import os
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
-from voletron.types import AnimalName, TagID, CoDwell, TimestampSeconds, DurationSeconds
+from voletron.types import AnimalName, TagID, TimestampSeconds, DurationSeconds
 from voletron.output.types import GroupChamberCohabRow, OutputBin
 
 def compute_group_chamber_cohabs(

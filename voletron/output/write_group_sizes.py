@@ -15,9 +15,9 @@
 
 import os
 from collections import defaultdict
-from typing import List, Dict, Union, Tuple
+from typing import List, Dict, Union
 
-from voletron.types import AnimalName, DurationSeconds, TagID, CoDwell, TimestampSeconds
+from voletron.types import AnimalName, DurationSeconds, TagID, TimestampSeconds
 from voletron.output.types import GroupSizeRow, OutputBin
 
 def compute_group_sizes(

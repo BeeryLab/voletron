@@ -14,9 +14,8 @@
 
 
 import os
-from typing import List, Tuple
-
-from voletron.types import Config, CoDwell, TimestampSeconds, DurationSeconds
+from typing import List
+from voletron.types import Config, TimestampSeconds, DurationSeconds
 from voletron.output.types import PairCohabRow, OutputBin
 
 def compute_pair_inclusive_cohabs(

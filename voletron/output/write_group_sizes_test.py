@@ -19,9 +19,8 @@ import tempfile
 from unittest.mock import MagicMock
 
 from voletron.output.write_group_sizes import write_group_sizes, compute_group_sizes
-from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Traversal, DurationSeconds
+from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, DurationSeconds
 from voletron.output.types import OutputBin
 
 # TODO write all the tests
@@ -40,11 +39,7 @@ class TestWriteGroupSizes(unittest.TestCase):
 
         # Animals foo and bar start in chambers 1 and 2, and never move, so
         # they're always alone.
-        traversals = []
 
-        state = CoDwellAccumulator(analysis_start_time, tag_id_to_start_chamber, [ChamberName("chamber_1"), ChamberName("chamber_2")])
-        for t in traversals:
-            state.update_state_from_traversal(t)
         bin_start = TimestampSeconds(0)
         bin_end = TimestampSeconds(100)
         mock_analyzer = MagicMock()

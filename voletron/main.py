@@ -42,7 +42,6 @@ def _parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--olcus_dir",
-        "--olcusDir",
         required=False,
         default=".",
         help="A directory containing Olcus output files. Defaults to current directory. "
@@ -54,6 +53,17 @@ def _parse_args(argv):
         "and optionally exactly one file called `validation.csv` (or `*_validation.csv`), "
         "comprised of lines of the form `timestamp, animal_name, expected_chamber`.",
     )
+    parser.add_argument(
+        "--timezone",
+        default="US/Pacific",
+        help="Olcus logs timestamps in the local timezone, but does not record "
+        "which timezone that is.  Thus, we allow specifying the timezone in "
+        "which the Olcus logs should be interpreted.  This makes no difference "
+        "to the current analyses, which are all just about durations anyway, "
+        "not about absolute time.  Defaults to 'US/Pacific'.  Other options "
+        "are listed at "
+        "https://en.wikipedia.org/wiki/List_of_tz_database_time_zones."
+        )
     parser.add_argument(
         "--start",
         help="Time at which to start the analysis, in the form "
@@ -78,6 +88,12 @@ def _parse_args(argv):
         help="Bin size, in seconds, for time-series outputs.  Default: 300",
         default=300
     )
+    parser.add_argument(
+        "--dwell_threshold",
+        type=float,
+        default=DEFAULT_TIME_BETWEEN_READS_THRESHOLD,
+        help="Time in seconds between reads to switch from short dwell (tube) to long dwell (cage/arena). Default: {}".format(DEFAULT_TIME_BETWEEN_READS_THRESHOLD)
+    )
     # parser.add_argument(
     #     "--habitat_time_offset_seconds",
     #     type=int,
@@ -86,29 +102,14 @@ def _parse_args(argv):
     #     "reporting.  Default: 600",
     #     default=600
     # )
-    parser.add_argument(
-        "--timezone",
-        default="US/Pacific",
-        help="Olcus logs timestamps in the local timezone, but does not record "
-        "which timezone that is.  Thus, we allow specifying the timezone in "
-        "which the Olcus logs should be interpreted.  This makes no difference "
-        "to the current analyses, which are all just about durations anyway, "
-        "not about absolute time.  Defaults to 'US/Pacific'.  Other options "
-        "are listed at "
-        "https://en.wikipedia.org/wiki/List_of_tz_database_time_zones."
-        )
+
     parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable verbose logging."
     )
-    parser.add_argument(
-        "--dwell_threshold",
-        type=float,
-        default=DEFAULT_TIME_BETWEEN_READS_THRESHOLD,
-        help="Time in seconds between reads to switch from short dwell (tube) to long dwell (cage/arena). Default: {}".format(DEFAULT_TIME_BETWEEN_READS_THRESHOLD)
-    )
-    return parser.parse_args()
+
+    return parser.parse_args(argv[1:])
 
 
 def _find_file(directory: str, exact_name: str, suffix: str) -> str | None:
@@ -164,16 +165,18 @@ def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
     return (config, validations, olcusDir)
 
 
-def main(argv):
+def main(argv=None):
     """Analyze a 'raw' file describing Olcus antenna data from a Beery Lab
     vole group-living RFID apparatus.  Infers co-habitation bouts and total
     co-hab duration for each pair of animals."""
+    if argv is None:
+        argv = sys.argv
     args = _parse_args(argv)
     
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format='%(message)s')
 
     logging.info("===================================")
-    logging.info("Voletron v2.1, 2026-01-01")
+    logging.info("Voletron v2.0, 2026-01-01")
     logging.info("http://github.com/beerylab/voletron")
     logging.info("===================================")
 

@@ -115,6 +115,7 @@ AnimalName, TagId, StartChamber
 Vole1, 982000356123456, Cage1
 Vole2, 982000356654321, CentralA
 ```
+*Note: `StartChamber` defines the animal's location at the **very beginning of the experiment** (the time of the first data point in your raw files). Even if you use the `--start` argument to analyze a later time window, you must still provide the location at the experiment start. Voletron uses this to simulate the animal's movements up to your analysis start time.*
 
 **C. Apparatus Configuration**
 -   Describes the hardware layout (which antenna ID maps to which chamber).
@@ -181,7 +182,7 @@ are formatted with 5 columns: `cantimestamp`, `datetimestamp`, `deviceid`,
 number. Antennas are indexed by the `deviceid` and `antennaID`.
 
 **Apparatus configuration**. The default apparatus configuration in
-[`apparatus_config.py`](voletron/apparatus_config.py_) describes 2 habitat setups,
+[`example_apparatus.json`](example_apparatus.json) describes 2 habitat setups,
 each with 4 side chambers arrayed around a central chamber. Ring antennas on the
 tubes connect the side-chambers to the central arenas. The mapping is scalable
 and flexible, but presumes two antennas per tube to define a side-chamber end
@@ -189,25 +190,39 @@ and a central-chamber end of each tube.
 
 ## Outputs
 
-A set of output files are written to the same directory where the inputs were
-found.
+Outputs will be written to a subdirectory named `voletron/` within the data directory.
 
 - `*.chambers.csv`: time each tag was present in each of the defined chambers.
-- `*.cohab.csv`: pairwise association times of each pair of tags (for social
-  network construction).
-- `*.group_cohab.csv`: time each tag was found on its own, in each pair, trio,
-  quad, etc.
+- `*.pair-inclusive.cohab.csv`: pairwise association times of each pair of tags
+  (for social network construction).
+- `*.group_chamber_cohab.csv`: time each tag was found on its own, in each pair, trio,
+  quad, etc., broken down by chamber.
 - `*.group_size.csv`: average group sizes each tag was found in, and average
   group sizes when in a group (excluding solo time).
-- `*.longdwells.csv`: any time a vole was present in a location for more than 6
-  hours. In most well-functioning tests this should not occur, so it indicates a
+- `*.longdwells.csv`: reports any time an animal was present in a location for more than 6
+  hours. In most well-functioning tests this should not occur, so this indicates a
   removed or lost RFID tag.
+- `*.validate.csv` (optional): if validation data is provided, this file details
+    whether the inferred animal location matched the expected location at specific timestamps.
+
+See [outputs.md](outputs.md) for more details.
 
 ## Inference logic
 
 When pit tags are detected at locations that are inconsistent with possible
-transitions through the central arena (e.g. skipping an antenna between two others), the
-location is interpolated. The default interpolation logic is: [TODO: describe]
+transitions through the apparatus (e.g. skipping an antenna between two others), the
+location is interpolated. The logic is:
+
+1.  **Adjacent Reads**: If two consecutive reads are from adjacent antennas (sharing a chamber), the animal is assumed to be in that shared chamber for the duration.
+2.  **Same Antenna**:
+    *   **Short Dwell (< 10s)**: Assumed to be in the **Tube**.
+    *   **Long Dwell (>= 10s)**: Assumed to be in the **Cage/Arena**.
+3.  **Missing Reads (Non-Adjacent)**:
+    *   If an animal appears at a location that is not adjacent to its last known location (e.g., jumping from `Tube1` connected to `Cage1` directly to `Tube2`), Voletron attempts to infer a single missing read at the Central Arena boundary.
+    *   **Heuristic**: The logic assumes the animal passed through the Central Arena. To handle the time ambiguity (since we don't know exactly when it entered/left the arena), Voletron **maximizes the time allocated to the Central Arena** and minimizes time in the Tube.
+    *   *Example (Tube -> Arena)*: If an animal is seen at the Cage-end of Tube 1, then next seen at a different Tube, the system infers it entered the Arena immediately after the first read.
+    *   *Example (Arena -> Tube)*: If an animal is seen at a different Tube, then next seen at the Cage-end of Tube 1, the system infers it stayed in the Arena until just before the second read.
+
 
 ## Contributing
 
@@ -226,37 +241,20 @@ merchantability, or fitness for a particular purpose.
 ## Changelog
 
 Version 2.0
-- Complete refactoring / rewrite
-- Output cohab in tubes, not just in cages
-- Binned activity
-
-## Recently done (Kelley requests to validate)
-
-1. Output file that sums seconds of cohab between voles in a specific chamber. Include all groupings from group cohab file (vole A+B, A+C, A+D, A+B+C, A+B+D, A+C+D, A+B+C+D etc.) for each chamber (central arena, cage 1,2,3,4). Include dwells and seconds. (Home cage analysis)
-Outputs: See attached Sheet 1. 
-
-2. Activity-I think you're already working on this, but bin transitions by 5 min increments by clock time. I'm less sure of how this output looks, so feel free to change. Could bump increments up to 10 mins. (Activity/Rhythms analysis)
-Outputs: See attached Sheet 2
-
-
+- Complete refactoring / rewrite.
+- Output cohab in tubes, not just in cages.
+- Time-binned reports throughout.
 
 ## Known Todos
 
 - TODO: Add log file, containing both the command line and the text currently
   sent to stdout.
-- TODO: examine error cases (e.g. cage vs. tube) and tweak heuristics
-- TODO: bin transition counts into 10 min buckets per animal in order to
+- TODO: examine error cases (e.g. cage vs. tube) and tweak heuristics, perhaps based on validation files.
+- TODO: consider migrating to Colab/Jupyter?  Probably not, unless there is specific demand for it.
+- Awaiting demand: bin transition counts into 10 min buckets per animal in order to
   generate histogram of activity pattern over the course of the day (for
-  ultradian rhythms)
-- TODO: consider migrating to Colab/Jupyter
-- TODO: more tests
+  ultradian rhythms).  This is largely implemented but disabled, and could be revived on request.
 
 
 
 
-
-
-3. Summary file/general thoughts on bins-is it possible to have two outputs here? Bins for one output by clock time in and the other by amount of time in arena? Is it also possible for me to change the borders for both outputs if needed during analysis? If not, can clock time be in 30 min intervals (12:00, 12:30, 13:00 etc.)  and time in arena be hourly (starting 10 mins after first tag read for 60 mins, 120 mins etc.).
-Outputs: See attached Sheet 3. Same output for time elapsed in arena.
-
-Investigate possible bug re. config at run start time vs. analysis start time??

@@ -93,5 +93,8 @@ eclipse
 
 settings.json
 
+build/
+
 # Virtual Environment
 venv/
+

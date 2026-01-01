@@ -3,9 +3,9 @@
 Voletron generates several CSV files containing different analyses of the animal tracking data. These files are typically found in a subdirectory named `voletron/<start_chamber>` within your data directory.
 
 **Output Binning:**
-All output files now support time binning. For each metric, rows are generated for:
-1.  **Fixed time intervals** (e.g., every 5 minutes), allowing for time-series analysis.
-2.  **The whole experiment duration**, providing overall summary statistics.
+All output files provide time binning. For each metric, rows are generated for:
+1.  **The whole experiment duration**, providing overall summary statistics.
+2.  **Fixed time intervals** (e.g., every 5 minutes, based on the value of the `bin_seconds` argument), allowing for time-series analysis.
 
 All files include `bin_start` and `bin_end` columns to indicate the time range for each row.
 
@@ -73,7 +73,7 @@ Lists dwells that exceed a certain duration threshold (default 6 hours), which m
 - `seconds`: Duration of the dwell in seconds.
 *Note: A long dwell is reported in the bin where it **started**.*
 
-## 6. Activity Time Series (`*.activity.*.csv`)
+<!-- ## 6. Activity Time Series (`*.activity.*.csv`)
 
 Time-series, data binning activity and social context into fixed time intervals.
 
@@ -86,11 +86,11 @@ Time-series, data binning activity and social context into fixed time intervals.
 - `avg_dwell_size_2`: Metrics related to group size 2.
 - `avg_dwell_size_3`: Metrics related to group size 3.
 - `avg_dwell_size_4`: Metrics related to group size 4.
-- `traversal_count`: Number of chamber transitions (movements) made by the animal during this bin.
+- `traversal_count`: Number of chamber transitions (movements) made by the animal during this bin. -->
 
-## 7. Validation (`*.validate.csv`)
+## 6. Validation (`*.validate.csv`)
 
-(Only generated if validation file provided)
+Only generated if a validation file is provided.
 Compares inferred locations against a manual ground-truth validation file.
 
 **Columns:**
@@ -98,7 +98,7 @@ Compares inferred locations against a manual ground-truth validation file.
 - `bin_end`: End timestamp of the bin.
 - `Correct`: `True` or `False`.
 - `Timestamp`: Time of the validation check.
-- `AnimalID`: Name of the animal.
+- `AnimalName`: Name of the animal.
 - `Expected`: Chamber reported in validation file.
 - `Observed`: List of chambers inferred by Voletron near that timestamp.
-*Note: A validation event is reported in the bin where it occurred.*
+*Note: A validation event is reported in the time bin when it occurred.*

@@ -41,8 +41,8 @@ def compute_long_dwells(
             all_dwells.append(d)
 
     for bin in bins:
-        b_start = bin.start
-        b_end = bin.end
+        b_start = bin.bin_start
+        b_end = bin.bin_end
         for d in all_dwells:
             # d: (tag_id, chamber, start_time, duration)
             start_time = d[2]
@@ -56,8 +56,10 @@ def compute_long_dwells(
             
             if start_time >= b_start and start_time < b_end:
                 rows.append(LongDwellRow(
+                    bin_number=bin.bin_number,
                     bin_start=b_start,
                     bin_end=b_end,
+                    bin_duration=b_end - b_start,
                     animal_name=config.tag_id_to_name[d[0]],
                     chamber_name=d[1],
                     start_time=start_time,
@@ -71,10 +73,10 @@ def write_long_dwells(
     exp_name: str,
 ):
     with open(os.path.join(out_dir, exp_name + ".longdwells.csv"), "w") as f:
-        f.write("bin_start,bin_end,animal,chamber,start_time,seconds\n")
+        f.write("bin_number,bin_start,bin_end,bin_duration,animal,chamber,start_time,seconds\n")
         for row in rows:
             f.write(
-                "{},{},{},{},{},{:.0f}\n".format(
-                    row.bin_start, row.bin_end, row.animal_name, row.chamber_name, format_time(row.start_time), row.duration_seconds
+                "{},{},{},{:.0f},{},{},{},{:.0f}\n".format(
+                    row.bin_number, row.bin_start, row.bin_end, row.bin_duration, row.animal_name, row.chamber_name, format_time(row.start_time), row.duration_seconds
                 )
             )

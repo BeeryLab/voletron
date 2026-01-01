@@ -37,9 +37,9 @@ class TestWriteGroupChamberCohabs(unittest.TestCase):
         mock_analyzer_3.duration = 20.0 # Wait, Bin 3 was 0-20?
         
         bins = [
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=mock_analyzer_1),
-            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=mock_analyzer_2),
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(20), analyzer=mock_analyzer_3)
+            OutputBin(bin_number=1, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(10), analyzer=mock_analyzer_1),
+            OutputBin(bin_number=2, bin_start=TimestampSeconds(10), bin_end=TimestampSeconds(20), analyzer=mock_analyzer_2),
+            OutputBin(bin_number=0, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(20), analyzer=mock_analyzer_3)
         ]
 
         tag_ids = [TagID("tag1"), TagID("tag2")]
@@ -51,20 +51,26 @@ class TestWriteGroupChamberCohabs(unittest.TestCase):
         
         # Bin 1
         r1 = rows[0]
+        self.assertEqual(r1.bin_number, 1)
         self.assertEqual(r1.bin_start, 0)
         self.assertEqual(r1.duration_seconds, 5.0)
+        self.assertEqual(r1.bin_duration, 10.0)
         self.assertEqual(r1.chamber_name, "c1")
         self.assertEqual(r1.animal_names, ["animal1", "animal2"])
 
         # Bin 2
         r2 = rows[1]
+        self.assertEqual(r2.bin_number, 2)
         self.assertEqual(r2.bin_start, 10)
         self.assertEqual(r2.duration_seconds, 5.0)
+        self.assertEqual(r2.bin_duration, 10.0)
 
         # Bin 3
         r3 = rows[2]
+        self.assertEqual(r3.bin_number, 0)
         self.assertEqual(r3.bin_start, 0)
         self.assertEqual(r3.duration_seconds, 10.0)
+        self.assertEqual(r3.bin_duration, 20.0)
 
     def test_write_group_chamber_cohabs(self):
         out_dir = tempfile.mkdtemp()
@@ -72,13 +78,14 @@ class TestWriteGroupChamberCohabs(unittest.TestCase):
         
         rows = [
              GroupChamberCohabRow(
+                bin_number=0,
                 bin_start=TimestampSeconds(0),
                 bin_end=TimestampSeconds(100),
+                bin_duration=100.0,
                 animal_names=["a1", "a2"],
                 chamber_name="c1",
                 dwell_count=1,
                 duration_seconds=10.0,
-                bin_duration=100.0
             )
         ]
         
@@ -89,8 +96,8 @@ class TestWriteGroupChamberCohabs(unittest.TestCase):
         
         with open(expected_file, 'r') as f:
             content = f.read()
-            self.assertIn("bin_start,bin_end,animals,chamber,dwells,seconds,bin_duration", content)
-            self.assertIn('0,100,a1 a2,c1,1,10,100', content)
+            self.assertIn("bin_number,bin_start,bin_end,bin_duration,animals,chamber,dwells,seconds", content)
+            self.assertIn('0,0,100,100,a1 a2,c1,1,10', content)
 
 if __name__ == '__main__':
     unittest.main()

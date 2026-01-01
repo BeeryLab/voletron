@@ -19,71 +19,82 @@ from voletron.time_span_analyzer import TimeSpanAnalyzer
 
 @dataclass
 class OutputBin:
-    start: TimestampSeconds
-    end: TimestampSeconds
+    bin_number: int
+    bin_start: TimestampSeconds
+    bin_end: TimestampSeconds
     analyzer: TimeSpanAnalyzer
 
 @dataclass
 class ChamberTimeRow:
+    bin_number: int
     bin_start: TimestampSeconds
     bin_end: TimestampSeconds
+    bin_duration: float
     animal_name: str
     chamber_times: Dict[str, float]
     total_time: float
 
 @dataclass
 class PairCohabRow:
+    bin_number: int
     bin_start: TimestampSeconds
     bin_end: TimestampSeconds
+    bin_duration: float
     animal_a_name: str
     animal_b_name: str
     dwell_count: int
     duration_seconds: float
-    bin_duration: float
 
 @dataclass
 class GroupChamberCohabRow:
+    bin_number: int
     bin_start: TimestampSeconds
     bin_end: TimestampSeconds
+    bin_duration: float
     animal_names: List[str]
     chamber_name: str
     dwell_count: int
     duration_seconds: float
-    bin_duration: float
 
 @dataclass
 class GroupSizeRow:
+    bin_number: int
     bin_start: TimestampSeconds
     bin_end: TimestampSeconds
+    bin_duration: float
     animal_name: str
     size_seconds: Dict[int, float]
     avg_group_size: float
     avg_group_size_nosolo: Union[float, str]
     sum_pair_time: float
-    bin_duration: float
 
 @dataclass
 class LongDwellRow:
+    bin_number: int
     bin_start: TimestampSeconds
     bin_end: TimestampSeconds
+    bin_duration: float
     animal_name: str
     chamber_name: str
     start_time: TimestampSeconds
     duration_seconds: float
 
-@dataclass
-class ActivityRow:
-    bin_start: TimestampSeconds  # Was start_time
-    bin_end: TimestampSeconds    # Was end_time
-    bin_seconds: int
-    tag_id: str
-    avg_dwell_sizes: List[float]  # [size1, size2, size3, size4]
-    traversal_count: int
+# @dataclass
+# class ActivityRow:
+#     bin_number: int
+#     bin_start: TimestampSeconds  # Was start_time
+#     bin_end: TimestampSeconds    # Was end_time
+#     bin_seconds: int
+#     tag_id: str
+#     avg_dwell_sizes: List[float]  # [size1, size2, size3, size4]
+#     traversal_count: int
 
 @dataclass
 class ValidationRow:
+    bin_number: int
     bin_start: TimestampSeconds
     bin_end: TimestampSeconds
+    bin_duration: float
     correct: bool
     timestamp: TimestampSeconds
     animal_name: str

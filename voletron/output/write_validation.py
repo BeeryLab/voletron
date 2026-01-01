@@ -32,8 +32,8 @@ def compute_validation(
     relevant_validations = [vv for vv in validations if vv.tag_id in tag_ids]
     
     for bin in bins:
-        b_start = bin.start
-        b_end = bin.end
+        b_start = bin.bin_start
+        b_end = bin.bin_end
         for v in relevant_validations:
             if v.timestamp >= b_start and v.timestamp < b_end:
                 # Charitably use a 2-minute window. Note: this logic looks at trajectory
@@ -49,8 +49,10 @@ def compute_validation(
                 ok = v.chamber in actual
                 
                 rows.append(ValidationRow(
+                    bin_number=bin.bin_number,
                     bin_start=b_start,
                     bin_end=b_end,
+                    bin_duration=b_end - b_start,
                     correct=ok,
                     timestamp=v.timestamp,
                     animal_name=tag_id_to_name[v.tag_id],
@@ -63,19 +65,6 @@ def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> 
     logging.info("\nValidation:")
     logging.info("-----------------------------")
 
-    # Calculate correctness for printing (using whole experiment rows if possible, or all?)
-    # Generally, printing summary usually refers to unique events. If we duplicate rows for bins,
-    # statistics will be skewed if we sum everything.
-    # However, for printing we can filter?
-    # Or just print based on the rows provided?
-    # The user asked for rows in time bins.
-    # I will calculate stats based on ALL rows passed here for now, or maybe only "whole" bins?
-    # Actually, we might want to just print stats for the "whole experiment" bin if we can identify it.
-    # Or simpler: just print count of correct rows in expected "whole" logical sense.
-    # But since rows might be duplicated (e.g. event A in bin 1 and in whole bin),
-    # let's only count rows where bin_end - bin_start is large? No that's hacky.
-    # I will just compute stats on the passed rows, assuming the user will look at the file for details.
-    
     if rows:
         correct_count = sum(1 for row in rows if row.correct)
         total_count = len(rows)
@@ -86,12 +75,14 @@ def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> 
         percentage = 0.0
 
     with open(os.path.join(out_dir, exp_name + ".validate.csv"), "w") as f:
-        f.write("bin_start,bin_end,Correct,Timestamp,AnimalName,Expected,Observed\n")
+        f.write("bin_number,bin_start,bin_end,bin_duration,Correct,Timestamp,AnimalName,Expected,Observed\n")
         
         for row in rows:
-            f.write("{},{},{},{},{},{},{}\n".format(
+            f.write("{},{},{},{:.0f},{},{},{},{},{}\n".format(
+                row.bin_number,
                 row.bin_start,
                 row.bin_end,
+                row.bin_duration,
                 row.correct,
                 format_time(row.timestamp),
                 row.animal_name,

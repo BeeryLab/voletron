@@ -28,19 +28,20 @@ def compute_pair_inclusive_cohabs(
         if bin.analyzer is None:
              continue
         analyzer = bin.analyzer
-        start = bin.start
-        end = bin.end
+        start = bin.bin_start
+        end = bin.bin_end
         
         for pair_dwell_aggregate in analyzer.get_pair_inclusive_stats():
             animal_a, animal_b = pair_dwell_aggregate.tag_ids
             rows.append(PairCohabRow(
+                bin_number=bin.bin_number,
                 bin_start=start,
                 bin_end=end,
+                bin_duration=analyzer.duration,
                 animal_a_name=config.tag_id_to_name[animal_a],
                 animal_b_name=config.tag_id_to_name[animal_b],
                 dwell_count=pair_dwell_aggregate.count,
                 duration_seconds=pair_dwell_aggregate.duration_seconds,
-                bin_duration=analyzer.duration,
             ))
     return rows
 
@@ -48,16 +49,17 @@ def write_pair_inclusive_cohabs(
     rows: List[PairCohabRow], out_dir: str, exp_name: str
 ):
     with open(os.path.join(out_dir, exp_name + ".pair-inclusive.cohab.csv"), "w") as f:
-        f.write("bin_start,bin_end,Animal A,Animal B,dwells,seconds,bin_duration\n")
+        f.write("bin_number,bin_start,bin_end,bin_duration,Animal A,Animal B,dwells,seconds\n")
         for row in rows:
             f.write(
-                "{},{},{},{},{},{:.0f},{:.0f}\n".format(
+                "{},{},{},{:.0f},{},{},{},{:.0f}\n".format(
+                    row.bin_number,
                     row.bin_start,
                     row.bin_end,
+                    row.bin_duration,
                     row.animal_a_name,
                     row.animal_b_name,
                     row.dwell_count,
                     row.duration_seconds,
-                    row.bin_duration,
                 )
             )

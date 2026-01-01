@@ -29,9 +29,9 @@ class TestWriteLongDwells(unittest.TestCase):
         tag_ids = [TagID("tag1")]
         
         bins = [
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=MagicMock()),
-            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=MagicMock()),
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(30), analyzer=MagicMock()) # Whole
+            OutputBin(bin_number=1, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(10), analyzer=MagicMock()),
+            OutputBin(bin_number=2, bin_start=TimestampSeconds(10), bin_end=TimestampSeconds(20), analyzer=MagicMock()),
+            OutputBin(bin_number=0, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(30), analyzer=MagicMock()) # Whole
         ]
 
         rows = compute_long_dwells(config, tag_ids, mock_trajectories, bins)
@@ -47,18 +47,21 @@ class TestWriteLongDwells(unittest.TestCase):
         # We can't guarantee order between bins easily unless we sort, but logic appends in bin order.
         
         # Bin 1
-        bin1_rows = [r for r in rows if r.bin_start == 0 and r.bin_end == 10]
+        bin1_rows = [r for r in rows if r.bin_number == 1]
         self.assertEqual(len(bin1_rows), 1)
         self.assertEqual(bin1_rows[0].start_time, 5)
+        self.assertEqual(bin1_rows[0].bin_duration, 10.0)
         
         # Bin 2
-        bin2_rows = [r for r in rows if r.bin_start == 10 and r.bin_end == 20]
+        bin2_rows = [r for r in rows if r.bin_number == 2]
         self.assertEqual(len(bin2_rows), 1)
         self.assertEqual(bin2_rows[0].start_time, 15)
+        self.assertEqual(bin2_rows[0].bin_duration, 10.0)
         
         # Bin 3
-        bin3_rows = [r for r in rows if r.bin_start == 0 and r.bin_end == 30]
+        bin3_rows = [r for r in rows if r.bin_number == 0]
         self.assertEqual(len(bin3_rows), 3)
+        self.assertEqual(bin3_rows[0].bin_duration, 30.0)
 
     def test_write_long_dwells(self):
         out_dir = tempfile.mkdtemp()
@@ -66,8 +69,10 @@ class TestWriteLongDwells(unittest.TestCase):
         
         rows = [
              LongDwellRow(
+                bin_number=0,
                 bin_start=TimestampSeconds(0),
                 bin_end=TimestampSeconds(100),
+                bin_duration=100.0,
                 animal_name="a1",
                 chamber_name="c1",
                 start_time=TimestampSeconds(50),
@@ -82,8 +87,8 @@ class TestWriteLongDwells(unittest.TestCase):
         
         with open(expected_file, 'r') as f:
             content = f.read()
-            self.assertIn("bin_start,bin_end,animal,chamber,start_time,seconds", content)
-            self.assertIn("0,100,a1,c1", content) # partial match
+            self.assertIn("bin_number,bin_start,bin_end,bin_duration,animal,chamber,start_time,seconds", content)
+            self.assertIn("0,0,100,100,a1,c1", content) # partial match
 
 if __name__ == '__main__':
     unittest.main()

@@ -30,8 +30,8 @@ def compute_group_chamber_cohabs(
         if bin.analyzer is None:
             continue
         analyzer = bin.analyzer
-        start = bin.start
-        end = bin.end
+        start = bin.bin_start
+        end = bin.bin_end
         for group_dwell_aggregate in analyzer.get_group_chamber_exclusive_durations():
             # Skip groups with tag_ids not in the requested list
             if not all(tag_id in tag_ids for tag_id in group_dwell_aggregate.tag_ids):
@@ -39,13 +39,14 @@ def compute_group_chamber_cohabs(
 
             names = sorted(tag_id_to_name[tag_id] for tag_id in group_dwell_aggregate.tag_ids)
             rows.append(GroupChamberCohabRow(
+                bin_number=bin.bin_number,
                 bin_start=start,
                 bin_end=end,
+                bin_duration=analyzer.duration,
                 animal_names=names,
                 chamber_name=group_dwell_aggregate.chamber,
                 dwell_count=group_dwell_aggregate.count,
                 duration_seconds=group_dwell_aggregate.duration_seconds,
-                bin_duration=analyzer.duration
             ))
     return rows
 
@@ -55,16 +56,17 @@ def write_group_chamber_cohabs(
     exp_name: str,
 ):
     with open(os.path.join(out_dir, exp_name + ".group_chamber_cohab.csv"), "w") as f:
-        f.write("bin_start,bin_end,animals,chamber,dwells,seconds,bin_duration\n")
+        f.write("bin_number,bin_start,bin_end,bin_duration,animals,chamber,dwells,seconds\n")
         for row in rows:
             f.write(
-                "{},{},{},{},{},{:.0f},{:.0f}\n".format(
+                "{},{},{},{:.0f},{},{},{},{:.0f}\n".format(
+                    row.bin_number,
                     row.bin_start,
                     row.bin_end,
+                    row.bin_duration,
                     " ".join(row.animal_names),
                     row.chamber_name,
                     row.dwell_count,
                     row.duration_seconds,
-                    row.bin_duration
                 )
             )

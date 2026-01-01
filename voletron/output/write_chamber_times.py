@@ -29,15 +29,17 @@ def compute_chamber_times(
     rows = []
     
     for bin in bins:
-        b_start = bin.start
-        b_end = bin.end
+        b_start = bin.bin_start
+        b_end = bin.bin_end
         for (tag_id, trajectory) in trajectories.animalTrajectories.items():
             if not tag_id in tag_ids:
                 continue
             ct = trajectory.time_per_chamber(b_start, b_end)
             rows.append(ChamberTimeRow(
+                bin_number=bin.bin_number,
                 bin_start=b_start,
                 bin_end=b_end,
+                bin_duration=b_end - b_start,
                 animal_name=config.tag_id_to_name[tag_id],
                 chamber_times=ct,
                 total_time=sum(ct.values())
@@ -51,11 +53,11 @@ def write_chamber_times(
     exp_name: str,
 ):
     with open(os.path.join(out_dir, exp_name + ".chambers.csv"), "w") as f:
-        f.write("bin_start,bin_end,animal," + ",".join(chambers) + ",total\n")
+        f.write("bin_number,bin_start,bin_end,bin_duration,animal," + ",".join(chambers) + ",total\n")
         for row in rows:
             aaa = ",".join(map(lambda c: "{:.0f}".format(row.chamber_times.get(c, 0.0)), chambers))
             f.write(
-                "{},{},{},{},{:.0f}\n".format(
-                    row.bin_start, row.bin_end, row.animal_name, aaa, row.total_time
+                "{},{},{},{:.0f},{},{},{:.0f}\n".format(
+                    row.bin_number, row.bin_start, row.bin_end, row.bin_duration, row.animal_name, aaa, row.total_time
                 )
             )

@@ -45,9 +45,9 @@ class TestWriteValidation(unittest.TestCase):
         tag_ids = [TagID("tag1")]
         
         bins = [
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=MagicMock()),
-            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=MagicMock()),
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(20), analyzer=MagicMock())
+            OutputBin(bin_number=1, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(10), analyzer=MagicMock()),
+            OutputBin(bin_number=2, bin_start=TimestampSeconds(10), bin_end=TimestampSeconds(20), analyzer=MagicMock()),
+            OutputBin(bin_number=0, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(20), analyzer=MagicMock())
         ]
 
         rows = compute_validation(tag_ids, mock_trajectories, tag_id_to_name, validations, bins)
@@ -55,20 +55,23 @@ class TestWriteValidation(unittest.TestCase):
         self.assertEqual(len(rows), 4)
         
         # Bin 1 (0-10): Validation at 5.
-        r1 = [r for r in rows if r.bin_start == 0 and r.bin_end == 10][0]
+        r1 = [r for r in rows if r.bin_number == 1][0]
         self.assertEqual(r1.timestamp, 5)
         self.assertTrue(r1.correct)
         self.assertEqual(r1.expected_chamber, "c1")
+        self.assertEqual(r1.bin_duration, 10.0)
         
         # Bin 2 (10-20): Validation at 15.
-        r2 = [r for r in rows if r.bin_start == 10 and r.bin_end == 20][0]
+        r2 = [r for r in rows if r.bin_number == 2][0]
         self.assertEqual(r2.timestamp, 15)
         self.assertFalse(r2.correct) # Expected c2, observed c1
         self.assertEqual(r2.expected_chamber, "c2")
+        self.assertEqual(r2.bin_duration, 10.0)
         
         # Bin 3 (0-20): Both.
-        r3_list = [r for r in rows if r.bin_start == 0 and r.bin_end == 20]
+        r3_list = [r for r in rows if r.bin_number == 0]
         self.assertEqual(len(r3_list), 2)
+        self.assertEqual(r3_list[0].bin_duration, 20.0)
 
     def test_write_validation(self):
         out_dir = tempfile.mkdtemp()
@@ -76,8 +79,10 @@ class TestWriteValidation(unittest.TestCase):
         
         rows = [
              ValidationRow(
+                bin_number=0,
                 bin_start=TimestampSeconds(0),
                 bin_end=TimestampSeconds(100),
+                bin_duration=100.0,
                 correct=True,
                 timestamp=TimestampSeconds(50),
                 animal_name="a1",
@@ -93,8 +98,8 @@ class TestWriteValidation(unittest.TestCase):
         
         with open(expected_file, 'r') as f:
             content = f.read()
-            self.assertIn("bin_start,bin_end,Correct,Timestamp,AnimalName,Expected,Observed", content)
-            self.assertIn("0,100,True", content)
+            self.assertIn("bin_number,bin_start,bin_end,bin_duration,Correct,Timestamp,AnimalName,Expected,Observed", content)
+            self.assertIn("0,0,100,100,True", content)
 
 if __name__ == '__main__':
     unittest.main()

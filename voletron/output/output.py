@@ -51,21 +51,25 @@ def write_outputs(
     # Add whole experiment bin
     full_analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
     bins.append(OutputBin(
+        bin_number=0,
         start=analysis_start_time, 
         end=analysis_end_time, 
         analyzer=full_analyzer
     ))
 
     current_start = analysis_start_time
+    bin_counter = 1
     while current_start < analysis_end_time:
         current_end = min(TimestampSeconds(current_start + bin_seconds), analysis_end_time)
         bin_analyzer = TimeSpanAnalyzer(co_dwells, TimestampSeconds(current_start), TimestampSeconds(current_end))
         bins.append(OutputBin(
+            bin_number=bin_counter,
             start=TimestampSeconds(current_start), 
             end=TimestampSeconds(current_end),
             analyzer=bin_analyzer
         ))
         current_start = TimestampSeconds(current_start + bin_seconds)
+        bin_counter += 1
 
     for (desired_start_chamber, chambers) in apparatus_chambers.items():
 

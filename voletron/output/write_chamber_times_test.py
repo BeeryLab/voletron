@@ -37,9 +37,9 @@ class TestWriteChamberTimes(unittest.TestCase):
         tag_ids = [TagID("tag1")]
         
         bins = [
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(10), analyzer=MagicMock()),
-            OutputBin(start=TimestampSeconds(10), end=TimestampSeconds(20), analyzer=MagicMock()),
-            OutputBin(start=TimestampSeconds(0), end=TimestampSeconds(20), analyzer=MagicMock())
+            OutputBin(bin_number=1, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(10), analyzer=MagicMock()),
+            OutputBin(bin_number=2, bin_start=TimestampSeconds(10), bin_end=TimestampSeconds(20), analyzer=MagicMock()),
+            OutputBin(bin_number=0, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(20), analyzer=MagicMock())
         ]
 
         rows = compute_chamber_times(config, tag_ids, mock_trajectories, bins)
@@ -47,20 +47,26 @@ class TestWriteChamberTimes(unittest.TestCase):
         self.assertEqual(len(rows), 3)
         
         # Row 1 (Bin 1)
+        self.assertEqual(rows[0].bin_number, 1)
         self.assertEqual(rows[0].bin_start, 0)
         self.assertEqual(rows[0].bin_end, 10)
+        self.assertEqual(rows[0].bin_duration, 10.0)
         self.assertEqual(rows[0].animal_name, "animal1")
         self.assertEqual(rows[0].chamber_times[ChamberName("c1")], 5.0)
         self.assertEqual(rows[0].total_time, 10.0)
 
         # Row 2 (Bin 2)
+        self.assertEqual(rows[1].bin_number, 2)
         self.assertEqual(rows[1].bin_start, 10)
         self.assertEqual(rows[1].bin_end, 20)
+        self.assertEqual(rows[1].bin_duration, 10.0)
         self.assertEqual(rows[1].chamber_times[ChamberName("c1")], 10.0)
         
         # Row 3 (Whole)
+        self.assertEqual(rows[2].bin_number, 0)
         self.assertEqual(rows[2].bin_start, 0)
         self.assertEqual(rows[2].bin_end, 20)
+        self.assertEqual(rows[2].bin_duration, 20.0)
         self.assertEqual(rows[2].total_time, 20.0)
 
     def test_write_chamber_times(self):
@@ -77,8 +83,10 @@ class TestWriteChamberTimes(unittest.TestCase):
         
         rows = [
              ChamberTimeRow(
+                bin_number=0,
                 bin_start=TimestampSeconds(0),
                 bin_end=TimestampSeconds(100),
+                bin_duration=100.0,
                 animal_name="a1",
                 chamber_times={ChamberName("c1"): 50.0},
                 total_time=50.0
@@ -92,8 +100,8 @@ class TestWriteChamberTimes(unittest.TestCase):
         
         with open(expected_file, 'r') as f:
             content = f.read()
-            self.assertIn("bin_start,bin_end,animal,c1,c2,total", content)
-            self.assertIn("0,100,a1,50,0,50", content)
+            self.assertIn("bin_number,bin_start,bin_end,bin_duration,animal,c1,c2,total", content)
+            self.assertIn("0,0,100,100,a1,50,0,50", content)
 
 
 if __name__ == '__main__':

@@ -31,8 +31,8 @@ def compute_group_sizes(
         if bin.analyzer is None:
             continue
         analyzer = bin.analyzer
-        start = bin.start
-        end = bin.end
+        start = bin.bin_start
+        end = bin.bin_end
         
         tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = defaultdict(lambda: [DurationSeconds(0)] * 9)
 
@@ -94,14 +94,15 @@ def compute_group_sizes(
             size_secs_dict = {i: group_size_seconds[i] for i in range(len(group_size_seconds))}
 
             rows.append(GroupSizeRow(
+                bin_number=bin.bin_number,
                 bin_start=start,
                 bin_end=end,
+                bin_duration=analyzer.duration,
                 animal_name=tag_id_to_name[tag_id],
                 size_seconds=size_secs_dict,
                 avg_group_size=avg_group_size,
                 avg_group_size_nosolo=avg_group_size_nosolo,
                 sum_pair_time=sum_pair_time,
-                bin_duration=analyzer.duration
             ))
     return rows
 
@@ -113,7 +114,7 @@ def write_group_sizes(
     group_sizes = range(0, 9)
 
     with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "w") as f:
-        f.write("bin_start,bin_end,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time,bin_duration\n")
+        f.write("bin_number,bin_start,bin_end,bin_duration,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time\n")
         for row in rows:
             aaa = ",".join(map(lambda a: "{:.0f}".format(row.size_seconds.get(a, 0.0)), group_sizes[1:]))
             
@@ -124,14 +125,15 @@ def write_group_sizes(
             )
 
             f.write(
-                "{},{},{},{},{:.2f},{},{:.4f},{:.0f}\n".format(
+                "{},{},{},{:.0f},{},{},{:.2f},{},{:.4f}\n".format(
+                    row.bin_number,
                     row.bin_start,
                     row.bin_end,
+                    row.bin_duration,
                     row.animal_name,
                     aaa,
                     row.avg_group_size,
                     avg_group_size_nosolo_str,
                     row.sum_pair_time,
-                    row.bin_duration,
                 )
             )

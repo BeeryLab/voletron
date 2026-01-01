@@ -60,7 +60,7 @@ class TestWriteGroupSizes(unittest.TestCase):
         mock_analyzer.get_group_chamber_exclusive_durations.return_value = dwells
         mock_analyzer.duration = 100.0
         
-        bins = [OutputBin(start=bin_start, end=bin_end, analyzer=mock_analyzer)]
+        bins = [OutputBin(bin_number=1, bin_start=bin_start, bin_end=bin_end, analyzer=mock_analyzer)]
 
         rows = compute_group_sizes(
             tag_ids, 
@@ -68,15 +68,22 @@ class TestWriteGroupSizes(unittest.TestCase):
             bins
         )
         
-        # bin_start,bin_end,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time,bin_duration)
+        # bin_number,bin_start,bin_end,bin_duration,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time
         write_group_sizes(rows, out_dir, exp_name)
 
         with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "r") as f:
-            f.readline()
+            header = f.readline()
+            self.assertIn("bin_number,bin_start,bin_end,bin_duration", header)
             foo_line = f.readline()
-            self.assertEqual(foo_line.split(',')[12], "N/A")
+            parts = foo_line.split(',')
+            self.assertEqual(parts[0], "1") 
+            # bin_duration at index 3
+            self.assertEqual(float(parts[3]), 100.0)
+            self.assertEqual(parts[14], "N/A") # index shifted +1 more for bin_duration
             bar_line = f.readline()
-            self.assertEqual(bar_line.split(',')[12], "N/A")
+            parts = bar_line.split(',')
+            self.assertEqual(parts[0], "1")
+            self.assertEqual(parts[14], "N/A")
 
 
 if __name__ == "__main__":

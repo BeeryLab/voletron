@@ -19,7 +19,7 @@ import glob
 import logging
 import os
 import sys
-from typing import Dict
+from typing import Dict, Optional
 import pytz
 
 from voletron.output.output import write_outputs
@@ -112,7 +112,7 @@ def _parse_args(argv):
     return parser.parse_args(argv[1:])
 
 
-def _find_file(directory: str, exact_name: str, suffix: str) -> str | None:
+def _find_file(directory: str, exact_name: str, suffix: str) -> Optional[str]:
     """Find a single file in directory matching exact_name or ending with suffix (case-insensitive).
     
     Returns: path to file, or None if not found.
@@ -174,6 +174,18 @@ def main(argv=None):
     args = _parse_args(argv)
     
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format='%(message)s')
+
+    # Add file handler to write logs to log.txt in the output directory
+    try:
+        out_dir = os.path.normpath(args.olcus_dir)
+        if os.path.isdir(out_dir):
+            log_file = os.path.join(out_dir, "log.txt")
+            file_handler = logging.FileHandler(log_file, mode='w')
+            file_handler.setFormatter(logging.Formatter('%(message)s'))
+            logging.getLogger().addHandler(file_handler)
+            logging.info("Command: {}".format(" ".join(argv)))
+    except Exception as e:
+        logging.warning(f"Failed to setup log.txt: {e}")
 
     logging.info("===================================")
     logging.info("Voletron v2.0, 2026-01-01")

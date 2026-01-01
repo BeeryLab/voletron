@@ -247,8 +247,6 @@ Version 2.0
 
 ## Known Todos
 
-- TODO: Add log file, containing both the command line and the text currently
-  sent to stdout.
 - TODO: examine error cases (e.g. cage vs. tube) and tweak heuristics, perhaps based on validation files.
 - TODO: consider migrating to Colab/Jupyter?  Probably not, unless there is specific demand for it.
 - Awaiting demand: bin transition counts into 10 min buckets per animal in order to

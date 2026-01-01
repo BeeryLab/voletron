@@ -1,0 +1,89 @@
+
+import unittest
+import tempfile
+import os
+from unittest.mock import MagicMock
+from voletron.output.write_long_dwells import compute_long_dwells, write_long_dwells
+from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName
+from voletron.trajectory import AllAnimalTrajectories
+from voletron.output.types import LongDwellRow
+
+class TestWriteLongDwells(unittest.TestCase):
+    def test_compute_long_dwells(self):
+        # Setup mocks
+        config = MagicMock(spec=Config)
+        config.tag_id_to_name = {TagID("tag1"): AnimalName("animal1")}
+        
+        mock_trajectory = MagicMock()
+        # Mock long_dwells to return a list of tuples (tag_id, chamber, start, duration)
+        # Note: compute_long_dwells iterates over ALL dwells and filters by bin
+        mock_trajectory.long_dwells.return_value = [
+            (TagID("tag1"), ChamberName("c1"), TimestampSeconds(5), 10.0),  # In bin 1
+            (TagID("tag1"), ChamberName("c2"), TimestampSeconds(15), 20.0), # In bin 2
+            (TagID("tag1"), ChamberName("c1"), TimestampSeconds(25), 5.0)   # Outside tested bins?
+        ]
+
+        mock_trajectories = MagicMock(spec=AllAnimalTrajectories)
+        mock_trajectories.animalTrajectories = {TagID("tag1"): mock_trajectory}
+
+        tag_ids = [TagID("tag1")]
+        
+        bins = [
+            (TimestampSeconds(0), TimestampSeconds(10)),
+            (TimestampSeconds(10), TimestampSeconds(20)),
+            (TimestampSeconds(0), TimestampSeconds(30)) # Whole
+        ]
+
+        rows = compute_long_dwells(config, tag_ids, mock_trajectories, bins)
+
+        # Expected:
+        # Bin 1 (0-10): Dwell starting at 5 should be here.
+        # Bin 2 (10-20): Dwell starting at 15 should be here.
+        # Bin 3 (0-30): All 3 dwells should be here.
+        
+        self.assertEqual(len(rows), 1 + 1 + 3)
+        
+        # Check specific rows
+        # We can't guarantee order between bins easily unless we sort, but logic appends in bin order.
+        
+        # Bin 1
+        bin1_rows = [r for r in rows if r.bin_start == 0 and r.bin_end == 10]
+        self.assertEqual(len(bin1_rows), 1)
+        self.assertEqual(bin1_rows[0].start_time, 5)
+        
+        # Bin 2
+        bin2_rows = [r for r in rows if r.bin_start == 10 and r.bin_end == 20]
+        self.assertEqual(len(bin2_rows), 1)
+        self.assertEqual(bin2_rows[0].start_time, 15)
+        
+        # Bin 3
+        bin3_rows = [r for r in rows if r.bin_start == 0 and r.bin_end == 30]
+        self.assertEqual(len(bin3_rows), 3)
+
+    def test_write_long_dwells(self):
+        out_dir = tempfile.mkdtemp()
+        exp_name = "test_exp"
+        
+        rows = [
+             LongDwellRow(
+                bin_start=TimestampSeconds(0),
+                bin_end=TimestampSeconds(100),
+                animal_name="a1",
+                chamber_name="c1",
+                start_time=TimestampSeconds(50),
+                duration_seconds=10.0
+            )
+        ]
+        
+        write_long_dwells(rows, out_dir, exp_name)
+        
+        expected_file = os.path.join(out_dir, "test_exp.longdwells.csv")
+        self.assertTrue(os.path.exists(expected_file))
+        
+        with open(expected_file, 'r') as f:
+            content = f.read()
+            self.assertIn("bin_start,bin_end,animal,chamber,start_time,seconds", content)
+            self.assertIn("0,100,a1,c1", content) # partial match
+
+if __name__ == '__main__':
+    unittest.main()

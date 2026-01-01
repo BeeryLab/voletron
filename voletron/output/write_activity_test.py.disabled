@@ -38,6 +38,12 @@ class TestWriteActivity(unittest.TestCase):
         start_time = TimestampSeconds(0)
         end_time = TimestampSeconds(600)
         bin_size = DurationSeconds(300)
+        
+        bins = [
+            (TimestampSeconds(0), TimestampSeconds(300)),
+            (TimestampSeconds(300), TimestampSeconds(600)),
+            (TimestampSeconds(0), TimestampSeconds(600))
+        ]
 
         # Mock open
         m = mock_open()
@@ -45,9 +51,7 @@ class TestWriteActivity(unittest.TestCase):
             rows = compute_activity(
                 trajectories=mock_trajectories,
                 co_dwells=co_dwells,
-                analysis_start_time=start_time,
-                analysis_end_time=end_time,
-                bin_secs=bin_size
+                bins=bins
             )
             write_activity(
                 rows=rows,
@@ -62,7 +66,7 @@ class TestWriteActivity(unittest.TestCase):
         
         # Expected calls:
         # Header
-        expected_header = "start_time,end_time,bin_seconds,tag_id,avg_dwell_size_1,avg_dwell_size_2,avg_dwell_size_3,avg_dwell_size_4,traversal_count\n"
+        expected_header = "bin_start,bin_end,bin_seconds,tag_id,avg_dwell_size_1,avg_dwell_size_2,avg_dwell_size_3,avg_dwell_size_4,traversal_count\n"
 
         # Bin 1: 0-300. CoDwell {tag1, tag2} for 100s. 
         #   Group size 2: 100s.
@@ -86,6 +90,11 @@ class TestWriteActivity(unittest.TestCase):
         # Bin 2 for tag1:
         # one dwell of 50s, group size 2. avg = 50/1 = 50.0
         expected_line_2 = "300,600,300,tag1,0.0,50.0,0.0,0.0,5"
+        
+        # Whole experiment bin: 0-600.
+        # Dwells: 100s (size 2), 50s (size 2). Total 150s.
+        # Avg group size 2: mean(100, 50) = 75.0
+        expected_line_3 = "0,600,600,tag1,0.0,75.0,0.0,0.0,5"
 
         # Check write calls. Note that 'write' is called multiple times.
         # We can aggregate all writes or check specific calls.
@@ -94,6 +103,7 @@ class TestWriteActivity(unittest.TestCase):
         self.assertIn(expected_header, written_content)
         self.assertIn(expected_line_1, written_content)
         self.assertIn(expected_line_2, written_content)
+        self.assertIn(expected_line_3, written_content)
 
 if __name__ == '__main__':
     unittest.main()

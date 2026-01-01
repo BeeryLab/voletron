@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 from voletron.output.write_group_sizes import write_group_sizes, compute_group_sizes
 from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Traversal
+from voletron.types import AnimalName, ChamberName, TagID, TimestampSeconds, Traversal, DurationSeconds
 
 # TODO write all the tests
 
@@ -35,6 +35,7 @@ class TestWriteGroupSizes(unittest.TestCase):
         analysis_end_time = TimestampSeconds(200)
         tag_id_to_name = {TagID('foo'): AnimalName('foo_name'), TagID('bar'): AnimalName('bar_name')}
         tag_id_to_start_chamber : dict[TagID, ChamberName] = {TagID('foo'): ChamberName('chamber_1'), TagID('bar'): ChamberName('chamber_2')}
+        bin_seconds = DurationSeconds(300) # Whole experiment is smaller than one bin
 
         # Animals foo and bar start in chambers 1 and 2, and never move, so
         # they're always alone.
@@ -44,17 +45,28 @@ class TestWriteGroupSizes(unittest.TestCase):
         for t in traversals:
             state.update_state_from_traversal(t)
         co_dwells = state.end(TimestampSeconds(300))
-        analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
+        # analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time) # Not needed to pass analyzer anymore
+        
+        bins = [
+            (TimestampSeconds(100), TimestampSeconds(200)), # bin_seconds=300, analysis start=100, end=200. End is min(100+300, 200) = 200.
+            (TimestampSeconds(100), TimestampSeconds(200)) # "whole experiment" bin
+        ]
 
-        rows = compute_group_sizes(tag_ids, analyzer, tag_id_to_name)
+        rows = compute_group_sizes(
+            tag_ids, 
+            co_dwells, 
+            tag_id_to_name,
+            bins
+        )
+        # bin_start,bin_end,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time,bin_duration)
         write_group_sizes(rows, out_dir, exp_name)
 
         with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "r") as f:
             f.readline()
             foo_line = f.readline()
-            self.assertEqual(foo_line.split(',')[10], "N/A")
+            self.assertEqual(foo_line.split(',')[12], "N/A")
             bar_line = f.readline()
-            self.assertEqual(bar_line.split(',')[10], "N/A")
+            self.assertEqual(bar_line.split(',')[12], "N/A")
 
 
 if __name__ == "__main__":

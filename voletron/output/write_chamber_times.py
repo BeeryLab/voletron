@@ -14,29 +14,32 @@
 
 
 import os
-from typing import List
+import math
+from typing import List, Tuple
 from voletron.trajectory import AllAnimalTrajectories
-from voletron.types import ChamberName, Config, TagID, TimestampSeconds
+from voletron.types import ChamberName, Config, TagID, TimestampSeconds, DurationSeconds
 from voletron.output.types import ChamberTimeRow
 
 def compute_chamber_times(
     config: Config,
     tag_ids: List[TagID],
-    chambers: List[ChamberName],
     trajectories: AllAnimalTrajectories,
-    analysis_start_time: TimestampSeconds,
-    analysis_end_time: TimestampSeconds,
+    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
 ) -> List[ChamberTimeRow]:
     rows = []
-    for (tag_id, trajectory) in trajectories.animalTrajectories.items():
-        if not tag_id in tag_ids:
-            continue
-        ct = trajectory.time_per_chamber(analysis_start_time, analysis_end_time)
-        rows.append(ChamberTimeRow(
-            animal_name=config.tag_id_to_name[tag_id],
-            chamber_times=ct,
-            total_time=sum(ct.values())
-        ))
+    
+    for (b_start, b_end) in bins:
+        for (tag_id, trajectory) in trajectories.animalTrajectories.items():
+            if not tag_id in tag_ids:
+                continue
+            ct = trajectory.time_per_chamber(b_start, b_end)
+            rows.append(ChamberTimeRow(
+                bin_start=b_start,
+                bin_end=b_end,
+                animal_name=config.tag_id_to_name[tag_id],
+                chamber_times=ct,
+                total_time=sum(ct.values())
+            ))
     return rows
 
 def write_chamber_times(
@@ -46,11 +49,11 @@ def write_chamber_times(
     exp_name: str,
 ):
     with open(os.path.join(out_dir, exp_name + ".chambers.csv"), "w") as f:
-        f.write("animal," + ",".join(chambers) + ",total\n")
+        f.write("bin_start,bin_end,animal," + ",".join(chambers) + ",total\n")
         for row in rows:
-            aaa = ",".join(map(lambda c: "{:.0f}".format(row.chamber_times[c]), chambers))
+            aaa = ",".join(map(lambda c: "{:.0f}".format(row.chamber_times.get(c, 0.0)), chambers))
             f.write(
-                "{},{},{:.0f}\n".format(
-                    row.animal_name, aaa, row.total_time
+                "{},{},{},{},{:.0f}\n".format(
+                    row.bin_start, row.bin_end, row.animal_name, aaa, row.total_time
                 )
             )

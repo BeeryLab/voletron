@@ -14,38 +14,47 @@
 
 
 import os
-from typing import List
+from typing import List, Tuple
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.types import Config
+from voletron.types import Config, CoDwell, TimestampSeconds, DurationSeconds
 from voletron.output.types import PairCohabRow
 
 def compute_pair_inclusive_cohabs(
-    config: Config, analyzer: TimeSpanAnalyzer
+    config: Config,
+    co_dwells: List[CoDwell],
+    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
 ) -> List[PairCohabRow]:
     rows = []
-    for codwell_aggregate in analyzer.get_pair_inclusive_stats():
-        animal_a, animal_b = codwell_aggregate.tag_ids
-        rows.append(PairCohabRow(
-            animal_a_name=config.tag_id_to_name[animal_a],
-            animal_b_name=config.tag_id_to_name[animal_b],
-            dwell_count=codwell_aggregate.count,
-            duration_seconds=codwell_aggregate.duration_seconds,
-            test_duration=analyzer.duration,
-        ))
+    
+    for (start, end) in bins:
+        analyzer = TimeSpanAnalyzer(co_dwells, start, end)
+        for codwell_aggregate in analyzer.get_pair_inclusive_stats():
+            animal_a, animal_b = codwell_aggregate.tag_ids
+            rows.append(PairCohabRow(
+                bin_start=start,
+                bin_end=end,
+                animal_a_name=config.tag_id_to_name[animal_a],
+                animal_b_name=config.tag_id_to_name[animal_b],
+                dwell_count=codwell_aggregate.count,
+                duration_seconds=codwell_aggregate.duration_seconds,
+                bin_duration=analyzer.duration,
+            ))
     return rows
 
 def write_pair_inclusive_cohabs(
     rows: List[PairCohabRow], out_dir: str, exp_name: str
 ):
     with open(os.path.join(out_dir, exp_name + ".pair-inclusive.cohab.csv"), "w") as f:
-        f.write("Animal A,Animal B,dwells,seconds,test_duration\n")
+        f.write("bin_start,bin_end,Animal A,Animal B,dwells,seconds,bin_duration\n")
         for row in rows:
             f.write(
-                "{},{},{},{:.0f},{:.0f}\n".format(
+                "{},{},{},{},{},{:.0f},{:.0f}\n".format(
+                    row.bin_start,
+                    row.bin_end,
                     row.animal_a_name,
                     row.animal_b_name,
                     row.dwell_count,
                     row.duration_seconds,
-                    row.test_duration,
+                    row.bin_duration,
                 )
             )

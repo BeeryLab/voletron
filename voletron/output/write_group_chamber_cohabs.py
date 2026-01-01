@@ -14,30 +14,36 @@
 
 
 import os
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.types import AnimalName, TagID
+from voletron.types import AnimalName, TagID, CoDwell, TimestampSeconds, DurationSeconds
 from voletron.output.types import GroupChamberCohabRow
 
 def compute_group_chamber_cohabs(
     tag_ids: List[TagID],
-    analyzer: TimeSpanAnalyzer,
+    co_dwells: List[CoDwell],
     tag_id_to_name: Dict[TagID, AnimalName],
+    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
 ) -> List[GroupChamberCohabRow]:
     rows = []
-    for group_dwell_aggregate in analyzer.get_group_chamber_exclusive_durations():
-        # Skip groups with tag_ids not in the requested list
-        if not all(tag_id in tag_ids for tag_id in group_dwell_aggregate.tag_ids):
-            continue
+    
+    for (start, end) in bins:
+        analyzer = TimeSpanAnalyzer(co_dwells, start, end)
+        for group_dwell_aggregate in analyzer.get_group_chamber_exclusive_durations():
+            # Skip groups with tag_ids not in the requested list
+            if not all(tag_id in tag_ids for tag_id in group_dwell_aggregate.tag_ids):
+                continue
 
-        names = sorted(tag_id_to_name[tag_id] for tag_id in group_dwell_aggregate.tag_ids)
-        rows.append(GroupChamberCohabRow(
-            animal_names=names,
-            chamber_name=group_dwell_aggregate.chamber,
-            dwell_count=group_dwell_aggregate.count,
-            duration_seconds=group_dwell_aggregate.duration_seconds,
-            test_duration=analyzer.duration
-        ))
+            names = sorted(tag_id_to_name[tag_id] for tag_id in group_dwell_aggregate.tag_ids)
+            rows.append(GroupChamberCohabRow(
+                bin_start=start,
+                bin_end=end,
+                animal_names=names,
+                chamber_name=group_dwell_aggregate.chamber,
+                dwell_count=group_dwell_aggregate.count,
+                duration_seconds=group_dwell_aggregate.duration_seconds,
+                bin_duration=analyzer.duration
+            ))
     return rows
 
 def write_group_chamber_cohabs(
@@ -46,14 +52,16 @@ def write_group_chamber_cohabs(
     exp_name: str,
 ):
     with open(os.path.join(out_dir, exp_name + ".group_chamber_cohab.csv"), "w") as f:
-        f.write("animals,chamber,dwells,seconds,test_duration\n")
+        f.write("bin_start,bin_end,animals,chamber,dwells,seconds,bin_duration\n")
         for row in rows:
             f.write(
-                "{},{},{},{:.0f},{:.0f}\n".format(
+                "{},{},{},{},{},{:.0f},{:.0f}\n".format(
+                    row.bin_start,
+                    row.bin_end,
                     " ".join(row.animal_names),
                     row.chamber_name,
                     row.dwell_count,
                     row.duration_seconds,
-                    row.test_duration
+                    row.bin_duration
                 )
             )

@@ -18,37 +18,47 @@ from voletron.types import TimestampSeconds, DurationSeconds
 
 @dataclass
 class ChamberTimeRow:
+    bin_start: TimestampSeconds
+    bin_end: TimestampSeconds
     animal_name: str
     chamber_times: Dict[str, float]
     total_time: float
 
 @dataclass
 class PairCohabRow:
+    bin_start: TimestampSeconds
+    bin_end: TimestampSeconds
     animal_a_name: str
     animal_b_name: str
     dwell_count: int
     duration_seconds: float
-    test_duration: float
+    bin_duration: float
 
 @dataclass
 class GroupChamberCohabRow:
+    bin_start: TimestampSeconds
+    bin_end: TimestampSeconds
     animal_names: List[str]
     chamber_name: str
     dwell_count: int
     duration_seconds: float
-    test_duration: float
+    bin_duration: float
 
 @dataclass
 class GroupSizeRow:
+    bin_start: TimestampSeconds
+    bin_end: TimestampSeconds
     animal_name: str
     size_seconds: Dict[int, float]
     avg_group_size: float
     avg_group_size_nosolo: Union[float, str]
     sum_pair_time: float
-    test_duration: float
+    bin_duration: float
 
 @dataclass
 class LongDwellRow:
+    bin_start: TimestampSeconds
+    bin_end: TimestampSeconds
     animal_name: str
     chamber_name: str
     start_time: TimestampSeconds
@@ -56,8 +66,8 @@ class LongDwellRow:
 
 @dataclass
 class ActivityRow:
-    start_time: TimestampSeconds
-    end_time: TimestampSeconds
+    bin_start: TimestampSeconds  # Was start_time
+    bin_end: TimestampSeconds    # Was end_time
     bin_seconds: int
     tag_id: str
     avg_dwell_sizes: List[float]  # [size1, size2, size3, size4]
@@ -65,6 +75,8 @@ class ActivityRow:
 
 @dataclass
 class ValidationRow:
+    bin_start: TimestampSeconds
+    bin_end: TimestampSeconds
     correct: bool
     timestamp: TimestampSeconds
     animal_name: str

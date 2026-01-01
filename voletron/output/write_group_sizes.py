@@ -15,80 +15,90 @@
 
 import os
 from collections import defaultdict
-from typing import List, Dict
+from typing import List, Dict, Union, Tuple
 from voletron.time_span_analyzer import TimeSpanAnalyzer
-from voletron.types import AnimalName, DurationSeconds, TagID
+from voletron.types import AnimalName, DurationSeconds, TagID, CoDwell, TimestampSeconds
 from voletron.output.types import GroupSizeRow
 
 def compute_group_sizes(
     tag_ids: List[TagID],
-    analyzer: TimeSpanAnalyzer,
+    co_dwells: List[CoDwell],
     tag_id_to_name: Dict[TagID, AnimalName],
+    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
 ) -> List[GroupSizeRow]:
-    tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = defaultdict(lambda: [DurationSeconds(0)] * 9)
-
-    for group_dwell in analyzer.get_group_chamber_exclusive_durations():
-        for tag_id in group_dwell.tag_ids:
-            if tag_id in tag_ids:
-                tag_id_group_size_seconds[tag_id][
-                    len(group_dwell.tag_ids)
-                ] = DurationSeconds(tag_id_group_size_seconds[tag_id][
-                    len(group_dwell.tag_ids)
-                ] + group_dwell.duration_seconds)
-
     rows = []
     
-    for (tag_id, group_size_seconds) in tag_id_group_size_seconds.items():
-        avg_group_size = (
-            sum(
-                [
-                    group_size * seconds
-                    for (group_size, seconds) in enumerate(group_size_seconds)
-                ]
-            )
-            / analyzer.duration
-        )
-        
-        # Total time when an animal was not alone
-        total_nosolo_seconds = sum(group_size_seconds[2:])
-        # If the animal was always alone, then the average not-alone group size is undefined.
-        if total_nosolo_seconds == 0:
-            avg_group_size_nosolo = "N/A"
-        else:
-            avg_group_size_nosolo = (
-                sum(
-                    [
-                        (group_size_minus_two + 2) * seconds
-                        for (group_size_minus_two, seconds) in enumerate(
-                            group_size_seconds[2:]
-                        )
-                    ]
-                )
-                / total_nosolo_seconds
-            )
+    for (start, end) in bins:
+        analyzer = TimeSpanAnalyzer(co_dwells, start, end)
+        tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = defaultdict(lambda: [DurationSeconds(0)] * 9)
 
-        sum_pair_time = (
-            sum(
-                [
-                    (group_size_minus_two + 1) * seconds
-                    for (group_size_minus_two, seconds) in enumerate(
-                        group_size_seconds[2:]
+        for group_dwell in analyzer.get_group_chamber_exclusive_durations():
+            for tag_id in group_dwell.tag_ids:
+                if tag_id in tag_ids:
+                    tag_id_group_size_seconds[tag_id][
+                        len(group_dwell.tag_ids)
+                    ] = DurationSeconds(tag_id_group_size_seconds[tag_id][
+                        len(group_dwell.tag_ids)
+                    ] + group_dwell.duration_seconds)
+
+        for (tag_id, group_size_seconds) in tag_id_group_size_seconds.items():
+            if analyzer.duration == 0:
+                avg_group_size = 0.0
+                sum_pair_time = 0.0
+            else:
+                avg_group_size = (
+                    sum(
+                        [
+                            group_size * seconds
+                            for (group_size, seconds) in enumerate(group_size_seconds)
+                        ]
                     )
-                ]
-            )
-            / analyzer.duration
-        )
-        
-        size_secs_dict = {i: group_size_seconds[i] for i in range(len(group_size_seconds))}
+                    / analyzer.duration
+                )
+                
+                sum_pair_time = (
+                    sum(
+                        [
+                            (group_size_minus_two + 1) * seconds
+                            for (group_size_minus_two, seconds) in enumerate(
+                                group_size_seconds[2:]
+                            )
+                        ]
+                    )
+                    / analyzer.duration
+                )
+            
+            # Total time when an animal was not alone
+            total_nosolo_seconds = sum(group_size_seconds[2:])
+            # If the animal was always alone, then the average not-alone group size is undefined.
+            if total_nosolo_seconds == 0:
+                avg_group_size_nosolo = "N/A"
+            else:
+                avg_group_size_nosolo = (
+                    sum(
+                        [
+                            (group_size_minus_two + 2) * seconds
+                            for (group_size_minus_two, seconds) in enumerate(
+                                group_size_seconds[2:]
+                            )
+                        ]
+                    )
+                    / total_nosolo_seconds
+                )
 
-        rows.append(GroupSizeRow(
-            animal_name=tag_id_to_name[tag_id],
-            size_seconds=size_secs_dict,
-            avg_group_size=avg_group_size,
-            avg_group_size_nosolo=avg_group_size_nosolo,
-            sum_pair_time=sum_pair_time,
-            test_duration=analyzer.duration
-        ))
+            
+            size_secs_dict = {i: group_size_seconds[i] for i in range(len(group_size_seconds))}
+
+            rows.append(GroupSizeRow(
+                bin_start=start,
+                bin_end=end,
+                animal_name=tag_id_to_name[tag_id],
+                size_seconds=size_secs_dict,
+                avg_group_size=avg_group_size,
+                avg_group_size_nosolo=avg_group_size_nosolo,
+                sum_pair_time=sum_pair_time,
+                bin_duration=analyzer.duration
+            ))
     return rows
 
 def write_group_sizes(
@@ -99,13 +109,9 @@ def write_group_sizes(
     group_sizes = range(0, 9)
 
     with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "w") as f:
-        f.write(
-            "animal,"
-            + ",".join(map(str, group_sizes[1:]))
-            + ",avg_group_size,avg_group_size_nosolo,sum_pair_time,test_duration\n"
-        )
+        f.write("bin_start,bin_end,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time,bin_duration\n")
         for row in rows:
-            aaa = ",".join(map(lambda a: "{:.0f}".format(row.size_seconds[a]), group_sizes[1:]))
+            aaa = ",".join(map(lambda a: "{:.0f}".format(row.size_seconds.get(a, 0.0)), group_sizes[1:]))
             
             avg_group_size_nosolo_str = (
                 row.avg_group_size_nosolo
@@ -114,12 +120,14 @@ def write_group_sizes(
             )
 
             f.write(
-                "{},{},{:.2f},{},{:.4f},{:.0f}\n".format(
+                "{},{},{},{},{:.2f},{},{:.4f},{:.0f}\n".format(
+                    row.bin_start,
+                    row.bin_end,
                     row.animal_name,
                     aaa,
                     row.avg_group_size,
                     avg_group_size_nosolo_str,
                     row.sum_pair_time,
-                    row.test_duration,
+                    row.bin_duration,
                 )
             )

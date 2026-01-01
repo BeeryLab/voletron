@@ -14,7 +14,7 @@
 
 
 import os
-from typing import List
+from typing import List, Tuple
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.types import CoDwell, DurationSeconds, TimestampSeconds
@@ -23,14 +23,11 @@ from voletron.output.types import ActivityRow
 def compute_activity(
     trajectories: AllAnimalTrajectories,
     co_dwells: List[CoDwell],
-    analysis_start_time: TimestampSeconds,
-    analysis_end_time: TimestampSeconds,
-    bin_secs: DurationSeconds,
+    bins: List[Tuple[TimestampSeconds, TimestampSeconds]],
 ) -> List[ActivityRow]:
     rows = []
-    start = analysis_start_time
-    end = TimestampSeconds(start + bin_secs)
-    while start < analysis_end_time:
+    
+    for (start, end) in bins:
         analyzer = TimeSpanAnalyzer(co_dwells, start, end)
         group_dwell_aggregates = analyzer.get_group_chamber_exclusive_durations()
 
@@ -46,10 +43,13 @@ def compute_activity(
                 sum(xx) / len(xx) if xx else 0.0 for xx in dwells_by_group_size
             ]
 
+            # bin_seconds field: for the whole experiment, it is end-start
+            current_bin_secs = int(end - start)
+
             rows.append(ActivityRow(
-                start_time=start,
-                end_time=end,
-                bin_seconds=bin_secs,
+                bin_start=start,
+                bin_end=end,
+                bin_seconds=current_bin_secs,
                 tag_id=tag_id,
                 avg_dwell_sizes=[
                      avg_dwells_by_group_size[1],
@@ -59,9 +59,6 @@ def compute_activity(
                 ],
                 traversal_count=count
             ))
-
-        start = TimestampSeconds(start + bin_secs)
-        end = TimestampSeconds(end + bin_secs)
     return rows
 
 def write_activity(
@@ -71,11 +68,11 @@ def write_activity(
     boundary_type: str,
 ):
     with open(os.path.join(out_dir, f"{exp_name}.activity.{boundary_type}.csv"), "w") as f:
-        f.write("start_time,end_time,bin_seconds,tag_id,avg_dwell_size_1,avg_dwell_size_2,avg_dwell_size_3,avg_dwell_size_4,traversal_count\n")
+        f.write("bin_start,bin_end,bin_seconds,tag_id,avg_dwell_size_1,avg_dwell_size_2,avg_dwell_size_3,avg_dwell_size_4,traversal_count\n")
         
         for row in rows:
             f.write(
-                f"{row.start_time},{row.end_time},{row.bin_seconds},{row.tag_id},"
+                f"{row.bin_start},{row.bin_end},{row.bin_seconds},{row.tag_id},"
                 f"{row.avg_dwell_sizes[0]},"
                 f"{row.avg_dwell_sizes[1]},"
                 f"{row.avg_dwell_sizes[2]},"

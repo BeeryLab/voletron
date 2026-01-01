@@ -74,14 +74,14 @@ def _parse_args(argv):
         help="Bin size, in seconds, for time-series outputs.  Default: 300",
         default=300
     )
-    parser.add_argument(
-        "--habitat_time_offset_seconds",
-        type=int,
-        help="Seconds after the first tag read when the 'time in habitat' clock "
-        "is considered to begin, for purposes of activity time series "
-        "reporting.  Default: 600",
-        default=600
-    )
+    # parser.add_argument(
+    #     "--habitat_time_offset_seconds",
+    #     type=int,
+    #     help="Seconds after the first tag read when the 'time in habitat' clock "
+    #     "is considered to begin, for purposes of activity time series "
+    #     "reporting.  Default: 600",
+    #     default=600
+    # )
     parser.add_argument(
         "timezone",
         default="US/Pacific",
@@ -148,26 +148,21 @@ def main(argv):
         state.update_state_from_traversal(t)
     co_dwells = state.end(analysis_end_time)
     
-    # Slice out the time span of interest for analysis
-    # TODO(soergel): bins here
-    # This analyzer is for the whole analysis period.
-    # Individual analyzers per time bin are built elsewhere.
-    analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
-    
+
     write_outputs(
         olcusDir,
         config,
         trajectories,
         co_dwells,
-        analyzer,
-        first_read_time,
-        last_read_time,
+        # analyzer,
+        # first_read_time,
+        # last_read_time,
         analysis_start_time,
         analysis_end_time,
         validations,
         args.validation,
         args.bin_seconds,
-        args.habitat_time_offset_seconds,
+        # args.habitat_time_offset_seconds,
     )
 
 

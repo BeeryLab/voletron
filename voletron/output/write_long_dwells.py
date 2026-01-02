@@ -33,7 +33,7 @@ def compute_long_dwells(
     rows = []
     
     # Pre-fetch all long dwells for relevant tags
-    all_dwells = []
+    long_dwells = []
     for (tag_id, trajectory) in trajectories.animalTrajectories.items():
         if not tag_id in tag_ids:
             continue
@@ -41,12 +41,12 @@ def compute_long_dwells(
             # d is (tag_id_str, chamber_name, start_time, duration)
             # trajectory.long_dwells() returns tuple with tag_id as first element? 
             # Let's check previous code: `config.tag_id_to_name[d[0]]`. Yes.
-            all_dwells.append(d)
+            long_dwells.append(d)
 
     for bin in bins:
         b_start = bin.bin_start
         b_end = bin.bin_end
-        for d in all_dwells:
+        for d in long_dwells:
             # d: (tag_id, chamber, start_time, duration)
             start_time = d[2]
             

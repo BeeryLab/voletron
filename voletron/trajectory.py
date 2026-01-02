@@ -14,6 +14,7 @@
 
 
 
+from bisect import bisect_right
 from collections import defaultdict
 from enum import Enum
 import heapq
@@ -126,6 +127,7 @@ class _AnimalTrajectory:
         self.dwells = [
             Dwell(start_time, start_time, CHAMBER_OUTSIDE)
         ]  # The animal was outside the apparatus before the experiment
+        self._dwell_starts = [start_time]
         self.priorRead = Read(tag_id, start_time, Antenna(CHAMBER_OUTSIDE, initial_chamber))
 
     def _append_dwell(self, start: TimestampSeconds, end: TimestampSeconds, chamber: ChamberName):
@@ -149,9 +151,10 @@ class _AnimalTrajectory:
                     )
                 )
             if lastDwell.chamber == chamber:
-                self.dwells.pop()
-                start = lastDwell.start
+                self.dwells[-1] = Dwell(lastDwell.start, end, lastDwell.chamber)
+                return
         self.dwells.append(Dwell(start, end, chamber))
+        self._dwell_starts.append(start)
 
     def update_from_read(self, read: Read) -> ReadFate:
         """
@@ -255,21 +258,22 @@ class _AnimalTrajectory:
                 yield LongDwell(self.tag_id, d.chamber, d.start, DurationMinutes(dwell_time / 60))
 
     def time_per_chamber(
-        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds, start_idx: int = 0
-    ) -> Tuple[Dict[ChamberName, DurationSeconds], int]:
+        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
+    ) -> Dict[ChamberName, DurationSeconds]:
         chamber_times : Dict[ChamberName, DurationSeconds] = defaultdict[ChamberName, DurationSeconds](lambda: DurationSeconds(0))
-        new_start_idx = start_idx
-        found_start = False
+        
+        # Binary search for the first dwell that might overlap.
+        # we want the first dwell d where d.end > analysis_start_time.
+        # Since dwells are contiguous, d.end == next_d.start.
+        # So we want the first dwell at index i where dwellings[i].end > analysis_start_time.
+        # This is equivalent to i where i is the first index such that dwellings[i+1].start > analysis_start_time.
+        # bisect_right on starts gives the index i where starts[i] > analysis_start_time.
+        # So we want i-1.
+        idx = bisect_right(self._dwell_starts, analysis_start_time)
+        start_idx = max(0, idx - 1)
+
         for i in range(start_idx, len(self.dwells)):
             d = self.dwells[i]
-            if d.end <= analysis_start_time:
-                new_start_idx = i
-                continue
-            
-            if not found_start:
-                new_start_idx = i
-                found_start = True
-
             if d.start >= analysis_end_time:
                 break
             
@@ -277,24 +281,16 @@ class _AnimalTrajectory:
             end = min(d.end, analysis_end_time)
             if end > start:
                 chamber_times[d.chamber] = DurationSeconds(chamber_times[d.chamber] + (end - start))
-        return chamber_times, new_start_idx
+        return chamber_times
 
     def get_locations_between(
-        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds, start_idx: int = 0
-    ) -> Tuple[List[str], int]:
+        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
+    ) -> List[str]:
         chambers = []
-        new_start_idx = start_idx
-        found_start = False
+        start_idx = max(0, bisect_right(self._dwell_starts, analysis_start_time) - 1)
+
         for i in range(start_idx, len(self.dwells)):
             d = self.dwells[i]
-            if d.end <= analysis_start_time:
-                new_start_idx = i
-                continue
-
-            if not found_start:
-                new_start_idx = i
-                found_start = True
-
             if d.start >= analysis_end_time:
                 break
 
@@ -302,7 +298,7 @@ class _AnimalTrajectory:
             end = min(d.end, analysis_end_time)
             if end > start:
                 chambers.append(d.chamber)
-        return chambers, new_start_idx
+        return chambers
 
     def count_traversals_between(
         self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds

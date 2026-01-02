@@ -30,18 +30,14 @@ def compute_chamber_times(
     t0 = time.perf_counter()
     rows = []
     
-    # Maintain next start index for each animal to avoid re-scanning dwells
-    next_start_indices: Dict[TagID, int] = {tag_id: 0 for tag_id in tag_ids}
-
     for bin in bins:
         b_start = bin.bin_start
         b_end = bin.bin_end
         for (tag_id, trajectory) in trajectories.animalTrajectories.items():
-            if tag_id not in next_start_indices:
+            if tag_id not in tag_ids:
                 continue
             
-            ct, last_idx = trajectory.time_per_chamber(b_start, b_end, start_idx=next_start_indices[tag_id])
-            next_start_indices[tag_id] = last_idx
+            ct = trajectory.time_per_chamber(b_start, b_end)
             
             rows.append(ChamberTimeRow(
                 bin_number=bin.bin_number,

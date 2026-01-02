@@ -216,11 +216,13 @@ def main(argv=None):
     reads_per_animal, first_read_time, analysis_start_time, analysis_end_time, last_read_time = _load_and_validate_data(args, config, olcusDir, timezone)
     
     ### Infer animal trajectories from antenna reads
-    trajectories = _build_trajectories(first_read_time, config, reads_per_animal, args.dwell_threshold)
+    # Ensure simulation covers the requested analysis start time, even if it precedes data
+    simulation_start_time = min(first_read_time, analysis_start_time)
+    trajectories = _build_trajectories(simulation_start_time, analysis_end_time, config, reads_per_animal, args.dwell_threshold)
     
     # Simulate state forwards, accumulating stats in the state object
     # and write it out along the way
-    state = CoDwellAccumulator(first_read_time, config.tag_id_to_start_chamber, all_chambers)
+    state = CoDwellAccumulator(simulation_start_time, config.tag_id_to_start_chamber, all_chambers)
     for t in trajectories.traversals():
         state.update_state_from_traversal(t)
     co_dwells = state.end(analysis_end_time)
@@ -304,11 +306,11 @@ def _print_time_intervals(first_read_time, analysis_start_time, analysis_end_tim
     logging.info("   Experiment End (last read): {}".format(format_time(last_read_time)))
 
 
-def _build_trajectories(first_read_time: TimestampSeconds, config: AnimalConfig, reads_per_animal: Dict[TagID, list[Read]], dwell_threshold: float) -> AllAnimalTrajectories:
+def _build_trajectories(simulation_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds, config: AnimalConfig, reads_per_animal: Dict[TagID, list[Read]], dwell_threshold: float) -> AllAnimalTrajectories:
     t0 = time.perf_counter()
     """Build animal trajectories from preprocessed reads."""
     all_animal_trajectories = AllAnimalTrajectories(
-        first_read_time, config.tag_id_to_start_chamber, reads_per_animal, dwell_threshold
+        simulation_start_time, analysis_end_time, config.tag_id_to_start_chamber, reads_per_animal, dwell_threshold
     )
 
     logging.info("\nRead Interpretations:")

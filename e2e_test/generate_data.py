@@ -119,18 +119,20 @@ def write_raw_data():
     # Experiment Start State (T=0)
     record_state(0.0)
 
+    # All animals start in CentralA
+
     # Setup: A & B to Cage 1, C to Cage 2, D to Cage 3
     # Just after start (T=1s)
-    add_event(1.0, "A", "Tube1_CentralA", "CentralA") # A at CentralA
+    add_event(1.0, "A", "Tube1_CentralA", "Tube1") # A leaves CentralA
     add_event(2.0, "A", "Tube1_Cage1", "Cage1")    # A enters Cage1
     
-    add_event(3.0, "B", "Tube1_CentralA", "CentralA") # B at CentralA
+    add_event(3.0, "B", "Tube1_CentralA", "Tube1") # B leaves CentralA
     add_event(4.0, "B", "Tube1_Cage1", "Cage1")    # B enters Cage1
     
-    add_event(5.0, "C", "Tube2_CentralA", "CentralA") # C at CentralA
+    add_event(5.0, "C", "Tube2_CentralA", "Tube2") # C leaves CentralA
     add_event(6.0, "C", "Tube2_Cage2", "Cage2")    # C enters Cage2
     
-    add_event(7.0, "D", "Tube3_CentralA", "CentralA") # D at CentralA
+    add_event(7.0, "D", "Tube3_CentralA", "Tube3") # D leaves CentralA
     add_event(8.0, "D", "Tube3_Cage3", "Cage3")    # D enters Cage3
     
     # Refresh reads at T=150s (mid-bin) to keep them alive

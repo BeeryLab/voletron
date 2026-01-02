@@ -126,8 +126,9 @@ class _AnimalTrajectory:
         self.dwell_threshold = dwell_threshold
         self.dwells = [
             Dwell(start_time, start_time, CHAMBER_OUTSIDE)
-        ]  # The animal was outside the apparatus before the experiment
+        ]  # The animal was outside the apparatus before the experiment.
         self._dwell_starts = [start_time]
+        # The animal passes into the initial chamber at the start time.
         self.priorRead = Read(tag_id, start_time, Antenna(CHAMBER_OUTSIDE, initial_chamber))
 
     def _append_dwell(self, start: TimestampSeconds, end: TimestampSeconds, chamber: ChamberName):
@@ -321,6 +322,7 @@ class AllAnimalTrajectories:
     def __init__(
         self,
         start_time: TimestampSeconds,
+        analysis_end_time: TimestampSeconds,
         tag_id_to_start_chamber: Dict[TagID, ChamberName],
         reads_per_animal: Dict[TagID, List[Read]],
         dwell_threshold: float,
@@ -330,7 +332,11 @@ class AllAnimalTrajectories:
             for [tag_id, initialChamber] in tag_id_to_start_chamber.items()
         }
         fate_counts = {member: 0 for fate, member in ReadFate.__members__.items()}
-        end_time = max([reads[-1].timestamp for reads in reads_per_animal.values()])
+        
+        last_read_timestamps = [reads[-1].timestamp for reads in reads_per_animal.values() if reads]
+        end_time = max(last_read_timestamps) if last_read_timestamps else analysis_end_time
+        end_time = max(end_time, analysis_end_time)
+
         for [tag_id, reads] in reads_per_animal.items():
             if len(reads) == 0:
                 continue

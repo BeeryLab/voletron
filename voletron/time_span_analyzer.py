@@ -36,14 +36,12 @@ class TimeSpanAnalyzer:
         self.duration = analysis_end_time - analysis_start_time
 
         # restrict to the analysis time interval
-        self.co_dwells = [
-            x
-            for x in [
-                _restrict_co_dwell(d, analysis_start_time, analysis_end_time)
-                for d in co_dwells
-            ]
-            if x
-        ]
+        restricted_dwells = []
+        for d in co_dwells:
+             rd = _restrict_co_dwell(d, analysis_start_time, analysis_end_time)
+             if rd:
+                 restricted_dwells.append(rd)
+        self.co_dwells = restricted_dwells
 
     def get_group_chamber_exclusive_durations(self) -> List[GroupDwellAggregate]:
         """Outputs dwell statistics for each group of animals in the "exclusive"
@@ -103,6 +101,8 @@ def _restrict_co_dwell(
     codwell: CoDwell, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
 ) -> Optional[CoDwell]:
     """Limit co-dwells to the analysis start-end interval."""
+    if codwell.start >= analysis_start_time and codwell.end <= analysis_end_time:
+        return codwell
     start = TimestampSeconds(max(codwell.start, analysis_start_time))
     end = TimestampSeconds(min(codwell.end, analysis_end_time))
     if end > start:

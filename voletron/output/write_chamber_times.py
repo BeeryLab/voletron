@@ -14,7 +14,8 @@
 
 
 import os
-import math
+import time
+import logging
 from typing import List, Tuple
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.types import ChamberName, AnimalConfig, TagID, TimestampSeconds, DurationSeconds
@@ -26,15 +27,22 @@ def compute_chamber_times(
     trajectories: AllAnimalTrajectories,
     bins: List[OutputBin],
 ) -> List[ChamberTimeRow]:
+    t0 = time.perf_counter()
     rows = []
     
+    # Maintain next start index for each animal to avoid re-scanning dwells
+    next_start_indices: Dict[TagID, int] = {tag_id: 0 for tag_id in tag_ids}
+
     for bin in bins:
         b_start = bin.bin_start
         b_end = bin.bin_end
         for (tag_id, trajectory) in trajectories.animalTrajectories.items():
-            if not tag_id in tag_ids:
+            if tag_id not in next_start_indices:
                 continue
-            ct = trajectory.time_per_chamber(b_start, b_end)
+            
+            ct, last_idx = trajectory.time_per_chamber(b_start, b_end, start_idx=next_start_indices[tag_id])
+            next_start_indices[tag_id] = last_idx
+            
             rows.append(ChamberTimeRow(
                 bin_number=bin.bin_number,
                 bin_start=b_start,
@@ -44,6 +52,7 @@ def compute_chamber_times(
                 chamber_times=ct,
                 total_time=sum(ct.values())
             ))
+    logging.debug(f"PROFILING: compute_chamber_times took {time.perf_counter() - t0:.3f} seconds")
     return rows
 
 def write_chamber_times(

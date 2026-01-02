@@ -14,6 +14,8 @@
 
 
 import os
+import time
+import logging
 from typing import List
 from voletron.apparatus_config import apparatus_chambers
 from voletron.output.write_validation import write_validation, compute_validation
@@ -42,11 +44,17 @@ def write_outputs(
     bin_seconds: DurationSeconds,
     # habitat_time_offset_seconds: DurationSeconds,
 ):
+    t0 = time.perf_counter()
     """Write all output files organized by apparatus."""
     exp_name = str(os.path.basename(olcusDir))
     
     # Create bins
+    t_bins = time.perf_counter()
     bins: List[OutputBin] = []
+
+    # Sort co-dwells by end time. This allows us to use a sliding window.
+    # Co-dwells are already mostly sorted by start time from CoDwellAccumulator.
+    sorted_co_dwells = sorted(co_dwells, key=lambda x: x.end)
 
     # Add whole experiment bin
     full_analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
@@ -59,9 +67,30 @@ def write_outputs(
 
     current_start = analysis_start_time
     bin_counter = 1
+    dwell_idx = 0
+    num_dwells = len(sorted_co_dwells)
+    
     while current_start < analysis_end_time:
         current_end = min(TimestampSeconds(current_start + bin_seconds), analysis_end_time)
-        bin_analyzer = TimeSpanAnalyzer(co_dwells, TimestampSeconds(current_start), TimestampSeconds(current_end))
+        
+        # Advance dwell_idx to the first dwell that ends after current_start
+        while dwell_idx < num_dwells and sorted_co_dwells[dwell_idx].end <= current_start:
+            dwell_idx += 1
+            
+        # Collect all dwells that start before current_end (and end after current_start, thanks to dwell_idx)
+        bin_dwells = []
+        for i in range(dwell_idx, num_dwells):
+            d = sorted_co_dwells[i]
+            if d.start >= current_end:
+                # Since we sorted by end time, we can't break here easily if we want to be perfectly correct,
+                # as a later dwell could end later but start earlier.
+                # However, co-dwells are generally short and mostly chronological.
+                # To be perfectly safe, we keep going, but in practice many will be skipped.
+                # Let's check start time too.
+                continue
+            bin_dwells.append(d)
+
+        bin_analyzer = TimeSpanAnalyzer(bin_dwells, TimestampSeconds(current_start), TimestampSeconds(current_end))
         bins.append(OutputBin(
             bin_number=bin_counter,
             bin_start=TimestampSeconds(current_start), 
@@ -70,6 +99,7 @@ def write_outputs(
         ))
         current_start = TimestampSeconds(current_start + bin_seconds)
         bin_counter += 1
+    logging.debug(f"PROFILING: bin creation took {time.perf_counter() - t_bins:.3f} seconds ({len(bins)} bins)")
 
     for (desired_start_chamber, chambers) in apparatus_chambers.items():
 
@@ -147,4 +177,6 @@ def write_outputs(
             out_dir,
             exp_name,
         )
+
+    logging.debug(f"PROFILING: write_outputs total took {time.perf_counter() - t0:.3f} seconds")
 

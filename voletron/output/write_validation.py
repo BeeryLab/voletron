@@ -15,6 +15,7 @@
 
 import os
 import logging
+import time
 from typing import List, Dict, Set, Tuple
 from voletron.types import AnimalName, TagID, Validation, TimestampSeconds, DurationSeconds, HabitatName
 from voletron.trajectory import AllAnimalTrajectories
@@ -28,24 +29,32 @@ def compute_validation(
     validations: List[Validation],
     bins: List[OutputBin],
 ) -> List[ValidationRow]:
+    t0 = time.perf_counter()
     rows = []
     relevant_validations = [vv for vv in validations if vv.tag_id in tag_ids]
     
-    bin = bin[0]
+    # Maintain next start indices for each animal
+    next_start_indices: Dict[TagID, int] = {tag_id: 0 for tag_id in tag_ids}
+
+    bin = bins[0]
     b_start = bin.bin_start
     b_end = bin.bin_end
     for v in relevant_validations:
         if v.timestamp >= b_start and v.timestamp < b_end:
-            # Charitably use a 2-minute window. Note: this logic looks at trajectory
-            # which is time-indexed. We should ensure we are checking the time specific 
-            # to the validation event, regardless of the bin we are currently "in",
-            # AS LONG AS the validation event itself falls in this bin.
-            # The validation logic (timestamp - 30 to timestamp + 90) stays the same relative
-            # to the validation timestamp.
-            
-            actual = trajectories.get_locations_between(
-                v.tag_id, v.timestamp - 30, v.timestamp + 90
+            # Charitably use a 2-minute window.
+            trajectory = trajectories.animalTrajectories[v.tag_id]
+            actual, last_idx = trajectory.get_locations_between(
+                v.timestamp - 30, v.timestamp + 90, start_idx=next_start_indices[v.tag_id]
             )
+            # We don't update next_start_indices[v.tag_id] here because validations 
+            # might not be perfectly chronological or might overlap in a way that 
+            # updating the index globally is risky. 
+            # However, since they ARE being processed within chronological bins, 
+            # we can at least use the index we have.
+            # Actually, let's just make it stateful for the validation loop since bins are chronological.
+            # BUT wait, multiple validations can be in one bin.
+            # Let's keep a bin-local index if needed, but the safest is to update it per bin.
+            
             ok = v.chamber in actual
             
             rows.append(ValidationRow(
@@ -59,6 +68,14 @@ def compute_validation(
                 expected_chamber=v.chamber,
                 observed_chambers=actual
             ))
+    
+    # After processing all validations in this bin, we can safely advance indices 
+    # for ALL animals to the start of this bin.
+    for tag_id in next_start_indices:
+        _, last_idx = trajectories.animalTrajectories[tag_id].get_locations_between(b_start, b_start, start_idx=next_start_indices[tag_id])
+        next_start_indices[tag_id] = last_idx
+
+    logging.debug(f"PROFILING: compute_validation took {time.perf_counter() - t0:.3f} seconds")
     return rows
 
 def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str, habitat_name: HabitatName) -> None:

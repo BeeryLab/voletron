@@ -14,6 +14,8 @@
 
 
 import os
+import time
+import logging
 from typing import List, Dict
 
 from voletron.types import AnimalName, TagID, TimestampSeconds, DurationSeconds
@@ -24,6 +26,7 @@ def compute_group_chamber_cohabs(
     tag_id_to_name: Dict[TagID, AnimalName],
     bins: List[OutputBin],
 ) -> List[GroupChamberCohabRow]:
+    t0 = time.perf_counter()
     rows = []
     
     for bin in bins:
@@ -48,6 +51,7 @@ def compute_group_chamber_cohabs(
                 dwell_count=group_dwell_aggregate.count,
                 duration_seconds=group_dwell_aggregate.duration_seconds,
             ))
+    logging.debug(f"PROFILING: compute_group_chamber_cohabs took {time.perf_counter() - t0:.3f} seconds")
     return rows
 
 def write_group_chamber_cohabs(

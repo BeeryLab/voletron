@@ -14,6 +14,8 @@
 
 
 import os
+import time
+import logging
 from collections import defaultdict
 from typing import List, Dict, Union
 
@@ -25,6 +27,7 @@ def compute_group_sizes(
     tag_id_to_name: Dict[TagID, AnimalName],
     bins: List[OutputBin],
 ) -> List[GroupSizeRow]:
+    t0 = time.perf_counter()
     rows = []
     
     for bin in bins:
@@ -89,7 +92,6 @@ def compute_group_sizes(
                     )
                     / total_nosolo_seconds
                 )
-
             
             size_secs_dict = {i: group_size_seconds[i] for i in range(len(group_size_seconds))}
 
@@ -104,6 +106,7 @@ def compute_group_sizes(
                 avg_group_size_nosolo=avg_group_size_nosolo,
                 sum_pair_time=sum_pair_time,
             ))
+    logging.debug(f"PROFILING: compute_group_sizes took {time.perf_counter() - t0:.3f} seconds")
     return rows
 
 def write_group_sizes(

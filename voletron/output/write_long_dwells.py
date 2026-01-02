@@ -14,6 +14,8 @@
 
 
 import os
+import time
+import logging
 from typing import List, Tuple
 from voletron.types import AnimalName, ChamberName, AnimalConfig, DurationMinutes, LongDwell, TagID, TimestampSeconds, DurationSeconds
 from voletron.trajectory import AllAnimalTrajectories
@@ -27,6 +29,7 @@ def compute_long_dwells(
     trajectories: AllAnimalTrajectories,
     bins: List[OutputBin],
 ) -> List[LongDwellRow]:
+    t0 = time.perf_counter()
     rows = []
     
     # Pre-fetch all long dwells for relevant tags
@@ -65,6 +68,7 @@ def compute_long_dwells(
                     start_time=start_time,
                     duration_seconds=d[3]
                 ))
+    logging.debug(f"PROFILING: compute_long_dwells took {time.perf_counter() - t0:.3f} seconds")
     return rows
 
 def write_long_dwells(

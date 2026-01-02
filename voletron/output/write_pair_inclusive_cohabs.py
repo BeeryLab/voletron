@@ -14,7 +14,9 @@
 
 
 import os
-from typing import List
+import time
+import logging
+from typing import List, Tuple
 from voletron.types import AnimalConfig, TimestampSeconds, DurationSeconds, TagID
 from voletron.output.types import PairCohabRow, OutputBin
 
@@ -23,6 +25,7 @@ def compute_pair_inclusive_cohabs(
     tag_ids: List[TagID],
     bins: List[OutputBin],
 ) -> List[PairCohabRow]:
+    t0 = time.perf_counter()
     rows = []
     
     # Pre-calculate set for O(1) lookups
@@ -50,6 +53,7 @@ def compute_pair_inclusive_cohabs(
                     dwell_count=pair_dwell_aggregate.count,
                     duration_seconds=pair_dwell_aggregate.duration_seconds,
                 ))
+    logging.debug(f"PROFILING: compute_pair_inclusive_cohabs took {time.perf_counter() - t0:.3f} seconds")
     return rows
 
 def write_pair_inclusive_cohabs(

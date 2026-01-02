@@ -19,10 +19,12 @@ import glob
 import logging
 import os
 import sys
+import time
 from typing import Dict, Optional
 import pytz
 
 from voletron.output.output import write_outputs
+from voletron.output.types import ValidationRow, OutputBin # Added for potential future use or consistency
 
 # Removed sys.path hack. Please run as python -m voletron.main
 
@@ -34,7 +36,7 @@ from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
 from voletron.constants import DEFAULT_TIME_BETWEEN_READS_THRESHOLD
-from voletron.types import AnimalConfig, Read, TagID, TimestampSeconds, Validation
+from voletron.types import AnimalConfig, Read, TagID, TimestampSeconds, Validation, AnimalName, DurationSeconds, HabitatName # Added AnimalName, DurationSeconds, HabitatName for potential future use or consistency
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 
 
@@ -145,6 +147,7 @@ def _parse_config(args, timezone) -> tuple[AnimalConfig, list[Validation], str]:
     if not configFile:
         raise ValueError("Could not find exactly one `*_animals.csv` or `animals.csv` file.")
     
+    logging.info(f"   Animal config: {configFile}")
     config = parse_config(configFile)
 
     validations: list[Validation] = []
@@ -152,7 +155,7 @@ def _parse_config(args, timezone) -> tuple[AnimalConfig, list[Validation], str]:
     try:
         validationFile = _find_file(args.olcus_dir, "validation.csv", "_validation.csv")
         if validationFile:
-            logging.info(f"Found validation file: {validationFile}")
+            logging.info(f"      Validation: {validationFile}")
             validations = parse_validation(
                 validationFile, {v: k for (k, v) in config.tag_id_to_name.items()}, timezone
             )
@@ -166,6 +169,7 @@ def _parse_config(args, timezone) -> tuple[AnimalConfig, list[Validation], str]:
 
 
 def main(argv=None):
+    t_total = time.perf_counter()
     """Analyze a 'raw' file describing Olcus antenna data from a Beery Lab
     vole group-living RFID apparatus.  Infers co-habitation bouts and total
     co-hab duration for each pair of animals."""
@@ -195,12 +199,16 @@ def main(argv=None):
 
     timezone : datetime.tzinfo = pytz.timezone(args.timezone)
 
+    logging.info("\nReading Configuration:")
+    logging.info("-----------------------------")
+
     ### Read input config and validation files
     apparatusFile = _find_file(args.olcus_dir, "apparatus.json", "_apparatus.json")
     if not apparatusFile:
         raise FileNotFoundError(f"Could not find apparatus config file (apparatus.json or *_apparatus.json) in {args.olcus_dir}")
     
     load_apparatus_config(apparatusFile)
+    logging.info(f"Apparatus config: {apparatusFile}")
     config, validations, olcusDir = _parse_config(args, timezone)
     
     ### Read raw data
@@ -232,10 +240,12 @@ def main(argv=None):
         args.bin_seconds,
         # args.habitat_time_offset_seconds,
     )
+    logging.debug(f"PROFILING: Total execution took {time.perf_counter() - t_total:.3f} seconds")
 
 
 def _load_and_validate_data(args, config, olcusDir, timezone):
     """Load raw data, handle preprocessing, and determine time intervals."""
+    t0 = time.perf_counter()
     logging.info("\nReading Data:")
     logging.info("-----------------------------")
     reads = parse_raw_dir(olcusDir, timezone)
@@ -255,6 +265,7 @@ def _load_and_validate_data(args, config, olcusDir, timezone):
     
     _print_time_intervals(first_read_time, analysis_start_time, analysis_end_time, last_read_time)
     
+    logging.debug(f"PROFILING: _load_and_validate_data took {time.perf_counter() - t0:.3f} seconds")
     return reads_per_animal, first_read_time, analysis_start_time, analysis_end_time, last_read_time
 
 
@@ -293,6 +304,7 @@ def _print_time_intervals(first_read_time, analysis_start_time, analysis_end_tim
 
 
 def _build_trajectories(first_read_time: TimestampSeconds, config: AnimalConfig, reads_per_animal: Dict[TagID, list[Read]], dwell_threshold: float) -> AllAnimalTrajectories:
+    t0 = time.perf_counter()
     """Build animal trajectories from preprocessed reads."""
     all_animal_trajectories = AllAnimalTrajectories(
         first_read_time, config.tag_id_to_start_chamber, reads_per_animal, dwell_threshold
@@ -303,6 +315,7 @@ def _build_trajectories(first_read_time: TimestampSeconds, config: AnimalConfig,
     for [key, value] in all_animal_trajectories.fate_percent.items():
         logging.info("{:>10}: {}".format(key, value))
         
+    logging.debug(f"PROFILING: _build_trajectories took {time.perf_counter() - t0:.3f} seconds")
     return all_animal_trajectories
 
 

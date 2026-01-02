@@ -17,7 +17,7 @@
 from collections import defaultdict
 from enum import Enum
 import heapq
-from typing import Dict, Generator, List, Iterator
+from typing import Dict, Generator, List, Iterator, Optional, Tuple
 
 from voletron.apparatus_config import all_antennae
 from voletron.constants import INFERRED_READ_EPSILON, LONG_DWELL_THRESHOLD_SECONDS
@@ -255,26 +255,54 @@ class _AnimalTrajectory:
                 yield LongDwell(self.tag_id, d.chamber, d.start, DurationMinutes(dwell_time / 60))
 
     def time_per_chamber(
-        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
-    ) -> Dict[ChamberName, DurationSeconds]:
+        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds, start_idx: int = 0
+    ) -> Tuple[Dict[ChamberName, DurationSeconds], int]:
         chamber_times : Dict[ChamberName, DurationSeconds] = defaultdict[ChamberName, DurationSeconds](lambda: DurationSeconds(0))
-        for d in self.dwells:
+        new_start_idx = start_idx
+        found_start = False
+        for i in range(start_idx, len(self.dwells)):
+            d = self.dwells[i]
+            if d.end <= analysis_start_time:
+                new_start_idx = i
+                continue
+            
+            if not found_start:
+                new_start_idx = i
+                found_start = True
+
+            if d.start >= analysis_end_time:
+                break
+            
             start = max(d.start, analysis_start_time)
             end = min(d.end, analysis_end_time)
             if end > start:
                 chamber_times[d.chamber] = DurationSeconds(chamber_times[d.chamber] + (end - start))
-        return chamber_times
+        return chamber_times, new_start_idx
 
     def get_locations_between(
-        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds
-    ) -> List[str]:
+        self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds, start_idx: int = 0
+    ) -> Tuple[List[str], int]:
         chambers = []
-        for d in self.dwells:
+        new_start_idx = start_idx
+        found_start = False
+        for i in range(start_idx, len(self.dwells)):
+            d = self.dwells[i]
+            if d.end <= analysis_start_time:
+                new_start_idx = i
+                continue
+
+            if not found_start:
+                new_start_idx = i
+                found_start = True
+
+            if d.start >= analysis_end_time:
+                break
+
             start = max(d.start, analysis_start_time)
             end = min(d.end, analysis_end_time)
             if end > start:
                 chambers.append(d.chamber)
-        return chambers
+        return chambers, new_start_idx
 
     def count_traversals_between(
         self, analysis_start_time: TimestampSeconds, analysis_end_time: TimestampSeconds

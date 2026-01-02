@@ -193,7 +193,7 @@ def main(argv=None):
         logging.warning(f"Failed to setup log.txt: {e}")
 
     logging.info("===================================")
-    logging.info("Voletron v2.0, 2026-01-01")
+    logging.info("Voletron v2.0, 2026-01-02")
     logging.info("http://github.com/beerylab/voletron")
     logging.info("===================================")
 

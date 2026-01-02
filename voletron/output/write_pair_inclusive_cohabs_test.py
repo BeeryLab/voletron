@@ -4,13 +4,13 @@ import tempfile
 import os
 from unittest.mock import MagicMock
 from voletron.output.write_pair_inclusive_cohabs import compute_pair_inclusive_cohabs, write_pair_inclusive_cohabs
-from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName
+from voletron.types import TagID, TimestampSeconds, ChamberName, AnimalName, AnimalConfig
 from voletron.output.types import PairCohabRow, OutputBin
 
 class TestWritePairInclusiveCohabs(unittest.TestCase):
     def test_compute_pair_inclusive_cohabs(self):
         # Setup mocks
-        config = MagicMock(spec=Config)
+        config = MagicMock(spec=AnimalConfig)
         config.tag_id_to_name = {
             TagID("tag1"): AnimalName("animal1"),
             TagID("tag2"): AnimalName("animal2")

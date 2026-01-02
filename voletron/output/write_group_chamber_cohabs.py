@@ -59,7 +59,7 @@ def write_group_chamber_cohabs(
         f.write("bin_number,bin_start,bin_end,bin_duration,animals,chamber,dwells,seconds\n")
         for row in rows:
             f.write(
-                "{},{},{},{:.0f},{},{},{},{:.0f}\n".format(
+                "{},{:.0f},{:.0f},{:.0f},{},{},{},{:.0f}\n".format(
                     row.bin_number,
                     row.bin_start,
                     row.bin_end,

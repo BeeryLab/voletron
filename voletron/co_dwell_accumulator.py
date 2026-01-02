@@ -77,9 +77,13 @@ class CoDwellAccumulator:
     def update_state_from_traversal(self, traversal: Traversal) -> None:
         if (
             traversal.orig and traversal.orig != CHAMBER_ERROR
+            and traversal.orig in self._chambers
         ):  # Initial placements have orig = None
             self._chambers[traversal.orig].depart(traversal.timestamp, traversal.tag_id)
-        if traversal.dest and traversal.dest != CHAMBER_ERROR:
+        if (
+            traversal.dest and traversal.dest != CHAMBER_ERROR
+            and traversal.dest in self._chambers
+        ):
             self._chambers[traversal.dest].arrive(traversal.timestamp, traversal.tag_id)
 
     def _record_group_dwell(

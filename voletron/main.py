@@ -139,7 +139,7 @@ def _find_file(directory: str, exact_name: str, suffix: str) -> Optional[str]:
     raise ValueError(f"Ambiguous file match. Found multiple files matching '{exact_name}' or '*{suffix}': {matches}")
 
 
-def _parse_config(args, timezone) -> tuple[Config, list[Validation], str]:
+def _parse_config(args, timezone) -> tuple[AnimalConfig, list[Validation], str]:
     # Look for animals.csv or *_animals.csv
     configFile = _find_file(args.olcus_dir, "animals.csv", "_animals.csv")
     if not configFile:
@@ -177,13 +177,13 @@ def main(argv=None):
 
     # Add file handler to write logs to log.txt in the output directory
     try:
-        out_dir = os.path.normpath(args.olcus_dir)
-        if os.path.isdir(out_dir):
-            log_file = os.path.join(out_dir, "log.txt")
-            file_handler = logging.FileHandler(log_file, mode='w')
-            file_handler.setFormatter(logging.Formatter('%(message)s'))
-            logging.getLogger().addHandler(file_handler)
-            logging.info("Command: {}".format(" ".join(argv)))
+        out_dir = os.path.join(os.path.normpath(args.olcus_dir), "voletron")
+        os.makedirs(out_dir, exist_ok=True)
+        log_file = os.path.join(out_dir, "log.txt")
+        file_handler = logging.FileHandler(log_file, mode='w')
+        file_handler.setFormatter(logging.Formatter('%(message)s'))
+        logging.getLogger().addHandler(file_handler)
+        logging.info("Command: {}".format(" ".join(argv)))
     except Exception as e:
         logging.warning(f"Failed to setup log.txt: {e}")
 
@@ -292,7 +292,7 @@ def _print_time_intervals(first_read_time, analysis_start_time, analysis_end_tim
     logging.info("   Experiment End (last read): {}".format(format_time(last_read_time)))
 
 
-def _build_trajectories(first_read_time: TimestampSeconds, config: Config, reads_per_animal: Dict[TagID, list[Read]], dwell_threshold: float) -> AllAnimalTrajectories:
+def _build_trajectories(first_read_time: TimestampSeconds, config: AnimalConfig, reads_per_animal: Dict[TagID, list[Read]], dwell_threshold: float) -> AllAnimalTrajectories:
     """Build animal trajectories from preprocessed reads."""
     all_animal_trajectories = AllAnimalTrajectories(
         first_read_time, config.tag_id_to_start_chamber, reads_per_animal, dwell_threshold

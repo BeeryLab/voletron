@@ -1,10 +1,9 @@
-
 import unittest
 import tempfile
 import os
 from unittest.mock import MagicMock
 from voletron.output.write_validation import compute_validation, write_validation
-from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName, Validation
+from voletron.types import Validation, TagID, AnimalName, ChamberName, AnimalConfig, TimestampSeconds
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.output.types import ValidationRow, OutputBin
 

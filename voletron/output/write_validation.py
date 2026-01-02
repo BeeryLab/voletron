@@ -78,7 +78,7 @@ def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> 
         f.write("bin_number,bin_start,bin_end,bin_duration,Correct,Timestamp,AnimalName,Expected,Observed\n")
         
         for row in rows:
-            f.write("{},{},{},{:.0f},{},{},{},{},{}\n".format(
+            f.write("{},{:.0f},{:.0f},{:.0f},{},{},{},{},{}\n".format(
                 row.bin_number,
                 row.bin_start,
                 row.bin_end,

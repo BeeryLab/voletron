@@ -15,11 +15,11 @@
 
 import os
 from typing import List
-from voletron.types import Config, TimestampSeconds, DurationSeconds
+from voletron.types import AnimalConfig, TimestampSeconds, DurationSeconds
 from voletron.output.types import PairCohabRow, OutputBin
 
 def compute_pair_inclusive_cohabs(
-    config: Config,
+    config: AnimalConfig,
     bins: List[OutputBin],
 ) -> List[PairCohabRow]:
     rows = []
@@ -52,7 +52,7 @@ def write_pair_inclusive_cohabs(
         f.write("bin_number,bin_start,bin_end,bin_duration,Animal A,Animal B,dwells,seconds\n")
         for row in rows:
             f.write(
-                "{},{},{},{:.0f},{},{},{},{:.0f}\n".format(
+                "{},{:.0f},{:.0f},{:.0f},{},{},{},{:.0f}\n".format(
                     row.bin_number,
                     row.bin_start,
                     row.bin_end,

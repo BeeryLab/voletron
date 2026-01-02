@@ -18,10 +18,10 @@ import logging
 from typing import Dict, Union
 from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
-from voletron.types import AnimalName, Antenna, ChamberName, Config, Read, TagID, TimestampSeconds, Validation
+from voletron.types import AnimalName, Antenna, ChamberName, AnimalConfig, Read, TagID, TimestampSeconds, Validation
 from voletron.apparatus_config import all_chambers
 
-def parse_config(filename: str) -> Config:
+def parse_config(filename: str) -> AnimalConfig:
     """Parse a run configuration file.
 
     The file must have a header line such as:
@@ -48,7 +48,7 @@ def parse_config(filename: str) -> Config:
             if ChamberName(start_chamber) not in all_chambers:
                 raise ValueError(f"Invalid start chamber {start_chamber} for animal {animal_name}")
             
-    return Config(tag_id_to_name, tag_id_to_start_chamber)
+    return AnimalConfig(tag_id_to_name, tag_id_to_start_chamber)
 
 
 def parse_validation(filename: str, name_to_tag_id: Dict[AnimalName, TagID], timezone: Union[StaticTzInfo, DstTzInfo]) -> list[Validation]:

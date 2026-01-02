@@ -17,7 +17,7 @@ import os
 from typing import List
 from voletron.apparatus_config import apparatus_chambers
 from voletron.output.write_validation import write_validation, compute_validation
-from voletron.types import Config, CoDwell, DurationSeconds, TimestampSeconds, Validation
+from voletron.types import AnimalConfig, CoDwell, DurationSeconds, TimestampSeconds, Validation
 from voletron.output.types import OutputBin
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.time_span_analyzer import TimeSpanAnalyzer
@@ -30,7 +30,7 @@ from voletron.output.write_group_sizes import write_group_sizes, compute_group_s
 
 def write_outputs(
     olcusDir: str,
-    config: Config,
+    config: AnimalConfig,
     trajectories: AllAnimalTrajectories,
     co_dwells: List[CoDwell],
     # first_read_time: TimestampSeconds,
@@ -52,8 +52,8 @@ def write_outputs(
     full_analyzer = TimeSpanAnalyzer(co_dwells, analysis_start_time, analysis_end_time)
     bins.append(OutputBin(
         bin_number=0,
-        start=analysis_start_time, 
-        end=analysis_end_time, 
+        bin_start=analysis_start_time, 
+        bin_end=analysis_end_time, 
         analyzer=full_analyzer
     ))
 
@@ -64,8 +64,8 @@ def write_outputs(
         bin_analyzer = TimeSpanAnalyzer(co_dwells, TimestampSeconds(current_start), TimestampSeconds(current_end))
         bins.append(OutputBin(
             bin_number=bin_counter,
-            start=TimestampSeconds(current_start), 
-            end=TimestampSeconds(current_end),
+            bin_start=TimestampSeconds(current_start), 
+            bin_end=TimestampSeconds(current_end),
             analyzer=bin_analyzer
         ))
         current_start = TimestampSeconds(current_start + bin_seconds)

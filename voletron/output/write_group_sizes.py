@@ -125,7 +125,7 @@ def write_group_sizes(
             )
 
             f.write(
-                "{},{},{},{:.0f},{},{},{:.2f},{},{:.4f}\n".format(
+                "{},{:.0f},{:.0f},{:.0f},{},{},{:.2f},{},{:.4f}\n".format(
                     row.bin_number,
                     row.bin_start,
                     row.bin_end,

@@ -17,11 +17,11 @@ import os
 import math
 from typing import List, Tuple
 from voletron.trajectory import AllAnimalTrajectories
-from voletron.types import ChamberName, Config, TagID, TimestampSeconds, DurationSeconds
+from voletron.types import ChamberName, AnimalConfig, TagID, TimestampSeconds, DurationSeconds
 from voletron.output.types import ChamberTimeRow, OutputBin
 
 def compute_chamber_times(
-    config: Config,
+    config: AnimalConfig,
     tag_ids: List[TagID],
     trajectories: AllAnimalTrajectories,
     bins: List[OutputBin],
@@ -57,7 +57,7 @@ def write_chamber_times(
         for row in rows:
             aaa = ",".join(map(lambda c: "{:.0f}".format(row.chamber_times.get(c, 0.0)), chambers))
             f.write(
-                "{},{},{},{:.0f},{},{},{:.0f}\n".format(
+                "{},{:.0f},{:.0f},{:.0f},{},{},{:.0f}\n".format(
                     row.bin_number, row.bin_start, row.bin_end, row.bin_duration, row.animal_name, aaa, row.total_time
                 )
             )

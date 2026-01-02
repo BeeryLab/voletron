@@ -4,7 +4,7 @@ import tempfile
 import os
 from unittest.mock import MagicMock
 from voletron.output.write_group_chamber_cohabs import compute_group_chamber_cohabs, write_group_chamber_cohabs
-from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName
+from voletron.types import AnimalConfig, TagID, TimestampSeconds, ChamberName, AnimalName
 from voletron.output.types import GroupChamberCohabRow, OutputBin
 
 class TestWriteGroupChamberCohabs(unittest.TestCase):

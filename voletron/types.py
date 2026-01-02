@@ -73,8 +73,8 @@ Traversal = NamedTuple(
 )
 
 # The configuration for this run, mapping tag IDs to animal names and start chambers.
-Config = NamedTuple(
-    "Config", [("tag_id_to_name", Dict[TagID, AnimalName]), ("tag_id_to_start_chamber", Dict[TagID, ChamberName])]
+AnimalConfig = NamedTuple(
+    "AnimalConfig", [("tag_id_to_name", Dict[TagID, AnimalName]), ("tag_id_to_start_chamber", Dict[TagID, ChamberName])]
 )
 
 GroupDwellAggregate = NamedTuple(

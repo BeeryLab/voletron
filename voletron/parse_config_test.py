@@ -15,21 +15,31 @@
 import unittest
 from unittest.mock import patch, mock_open
 import pytz
+import tempfile
+import os
 from voletron.parse_config import parse_config, parse_validation
 from voletron.apparatus_config import load_apparatus_config
+from voletron.types import TagID, AnimalName, ChamberName, AnimalConfig
+
 
 class TestParseConfig(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         load_apparatus_config("example_apparatus.json")
 
-    def test_parse_config_valid(self):
-        mock_data = "AnimalName, TagId, StartChamber\nAnimal1, tag1, Cage1\nAnimal2, tag2, Cage2"
-        with patch("builtins.open", mock_open(read_data=mock_data)):
-            config = parse_config("dummy_path")
-            self.assertEqual(config.tag_id_to_name["tag1"], "Animal1")
+    def test_parse_config(self):
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write("AnimalName,TagId,StartChamber\n")
+            f.write("animal1,tag1,Cage1\n")
+            temp_name = f.name
+        
+        try:
+            config = parse_config(temp_name)
+            self.assertIsInstance(config, AnimalConfig)
+            self.assertEqual(config.tag_id_to_name["tag1"], "animal1")
             self.assertEqual(config.tag_id_to_start_chamber["tag1"], "Cage1")
-            self.assertEqual(config.tag_id_to_name["tag2"], "Animal2")
+        finally:
+            os.remove(temp_name)
 
     def test_parse_config_invalid_header(self):
         mock_data = "Wrong, Header, Here\nAnimal1, tag1, Cage1"

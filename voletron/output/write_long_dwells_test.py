@@ -1,17 +1,16 @@
-
 import unittest
 import tempfile
 import os
 from unittest.mock import MagicMock
 from voletron.output.write_long_dwells import compute_long_dwells, write_long_dwells
-from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName
+from voletron.types import AnimalConfig, TagID, TimestampSeconds, ChamberName, AnimalName, DurationMinutes, LongDwell
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.output.types import LongDwellRow, OutputBin
 
 class TestWriteLongDwells(unittest.TestCase):
     def test_compute_long_dwells(self):
         # Setup mocks
-        config = MagicMock(spec=Config)
+        config = MagicMock(spec=AnimalConfig)
         config.tag_id_to_name = {TagID("tag1"): AnimalName("animal1")}
         
         mock_trajectory = MagicMock()

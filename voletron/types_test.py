@@ -18,7 +18,7 @@ from voletron.types import (
     Antenna,
     ChamberName,
     CoDwell,
-    Config,
+    AnimalConfig,
     DurationMinutes,
     DurationSeconds,
     Dwell,
@@ -78,11 +78,6 @@ class TestStructs(unittest.TestCase):
         self.assertEqual(t.tag_id, "tag1")
         self.assertEqual(t.orig, "cage1")
         self.assertEqual(t.dest, "tube1")
-
-    def test_config_instantiation(self):
-        c = Config(tag_id_to_name={TagID("tag1"): AnimalName("name1")}, tag_id_to_start_chamber={TagID("tag1"): ChamberName("cage1")})
-        self.assertEqual(c.tag_id_to_name[TagID("tag1")], AnimalName("name1"))
-        self.assertEqual(c.tag_id_to_start_chamber[TagID("tag1")], ChamberName("cage1"))
 
     def test_group_dwell_aggregate_instantiation(self):
         gda = GroupDwellAggregate(tag_ids=[TagID("tag1"), TagID("tag2")], chamber=ChamberName("cage1"), count=5, duration_seconds=DurationSeconds(100.0))

@@ -4,14 +4,14 @@ import tempfile
 import os
 from unittest.mock import MagicMock
 from voletron.output.write_chamber_times import compute_chamber_times, write_chamber_times
-from voletron.types import Config, TagID, TimestampSeconds, ChamberName, AnimalName, DurationSeconds
+from voletron.types import AnimalConfig, TagID, TimestampSeconds, ChamberName, AnimalName, DurationSeconds
 from voletron.output.types import OutputBin
 from voletron.trajectory import AllAnimalTrajectories
 
 class TestWriteChamberTimes(unittest.TestCase):
     def test_compute_chamber_times(self):
         # Setup mocks
-        config = MagicMock(spec=Config)
+        config = MagicMock(spec=AnimalConfig)
         config.tag_id_to_name = {TagID("tag1"): AnimalName("animal1")}
         
         mock_trajectory = MagicMock()

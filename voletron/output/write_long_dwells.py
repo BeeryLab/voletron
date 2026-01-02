@@ -15,14 +15,14 @@
 
 import os
 from typing import List, Tuple
-from voletron.types import AnimalName, ChamberName, Config, DurationMinutes, LongDwell, TagID, TimestampSeconds, DurationSeconds
+from voletron.types import AnimalName, ChamberName, AnimalConfig, DurationMinutes, LongDwell, TagID, TimestampSeconds, DurationSeconds
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
 from voletron.output.types import LongDwellRow, OutputBin
 
 
 def compute_long_dwells(
-    config: Config,
+    config: AnimalConfig,
     tag_ids: List[TagID],
     trajectories: AllAnimalTrajectories,
     bins: List[OutputBin],
@@ -76,7 +76,7 @@ def write_long_dwells(
         f.write("bin_number,bin_start,bin_end,bin_duration,animal,chamber,start_time,seconds\n")
         for row in rows:
             f.write(
-                "{},{},{},{:.0f},{},{},{},{:.0f}\n".format(
+                "{},{:.0f},{:.0f},{:.0f},{},{},{},{:.0f}\n".format(
                     row.bin_number, row.bin_start, row.bin_end, row.bin_duration, row.animal_name, row.chamber_name, format_time(row.start_time), row.duration_seconds
                 )
             )

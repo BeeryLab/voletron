@@ -22,7 +22,7 @@ from typing import Generator, NewType, Optional, Union
 from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
 from voletron.apparatus_config import olcus_id_to_antenna_hardcode
-from voletron.types import Antenna, Config, Read, TagID, TimestampSeconds
+from voletron.types import Antenna, AnimalConfig, Read, TagID, TimestampSeconds
 
 OlcusDeviceID = NewType('OlcusDeviceID', int)
 OlcusAntennaID = NewType('OlcusAntennaID', int)

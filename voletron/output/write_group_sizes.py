@@ -98,6 +98,8 @@ def write_group_sizes(
 
     with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "w") as f:
         f.write("bin_number,bin_start,bin_end,bin_duration,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo\n")
+        # Sort rows to ensure deterministic output order
+        rows.sort(key=lambda r: (r.bin_number, r.animal_name))
         for row in rows:
             aaa = ",".join(map(lambda a: "{:.0f}".format(row.size_seconds.get(a, 0.0)), group_sizes[1:]))
             

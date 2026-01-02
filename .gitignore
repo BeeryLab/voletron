@@ -11,6 +11,8 @@ raw_cohort_1
 raw_orig
 test-*
 
+e2e_test/experiment
+
 ## General temp files
 
 *.DS_Store

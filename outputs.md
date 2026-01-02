@@ -14,8 +14,10 @@ All files include `bin_start` and `bin_end` columns to indicate the time range f
 Records the total time each animal spent in each defined chamber.
 
 **Columns:**
+- `bin_number`: Sequence number of the time bin (0 for full experiment).
 - `bin_start`: Start timestamp of the bin (seconds).
 - `bin_end`: End timestamp of the bin (seconds).
+- `bin_duration`: Total duration of the bin in seconds.
 - `animal`: Name of the animal.
 - `[chamber_names...]`: One column for each chamber name (e.g., `CentralA`, `Cage1`, `Tube1`), containing the time in seconds spent in that chamber.
 - `total`: Total tracked time for the animal in seconds.
@@ -25,48 +27,52 @@ Records the total time each animal spent in each defined chamber.
 Records the amount of time each pair of animals spent in the same location (chamber). "Inclusive" means that if animals A, B, and C are together, that counts for the pairs {A,B}, {B,C}, and {A,C}.
 
 **Columns:**
+- `bin_number`: Sequence number of the time bin (0 for full experiment).
 - `bin_start`: Start timestamp of the bin.
 - `bin_end`: End timestamp of the bin.
+- `bin_duration`: Duration of the bin (or whole experiment).
 - `Animal A`: Name of the first animal in the pair.
 - `Animal B`: Name of the second animal in the pair.
 - `dwells`: Number of separate cohabitation events (bouts).
 - `seconds`: Total duration of cohabitation in seconds.
-- `bin_duration`: Duration of the bin (or whole experiment).
 
 ## 3. Group Chamber Cohabitation (`*.group_chamber_cohab.csv`)
 
 Records cohabitation stats broken down by specific groups of animals in specific chambers. This is "exclusive", meaning a group of {A,B,C} is counted as that specific trio, not as subsets.
 
 **Columns:**
+- `bin_number`: Sequence number of the time bin (0 for full experiment).
 - `bin_start`: Start timestamp of the bin.
 - `bin_end`: End timestamp of the bin.
+- `bin_duration`: Duration of the bin (or whole experiment).
 - `animals`: Names of the animals in the group, space-separated.
 - `chamber`: Name of the chamber where the group was located.
 - `dwells`: Number of times this exact group was found in this chamber.
 - `seconds`: Total duration in seconds.
-- `bin_duration`: Duration of the bin (or whole experiment).
 
 ## 4. Group Sizes (`*.group_size.csv`)
 
 Summary statistics about social group sizes for each animal.
 
 **Columns:**
+- `bin_number`: Sequence number of the time bin (0 for full experiment).
 - `bin_start`: Start timestamp of the bin.
 - `bin_end`: End timestamp of the bin.
+- `bin_duration`: Duration of the bin (or whole experiment).
 - `animal`: Name of the animal.
 - `1` through `8`: Total seconds the animal spent in a group of size N (where N=1 is solo).
 - `avg_group_size`: The average size of the group the animal was in (weighted by time).
 - `avg_group_size_nosolo`: The average size of the group when the animal was NOT alone.
-- `sum_pair_time`: Metric reflecting total social exposure.
-- `bin_duration`: Duration of the bin (or whole experiment).
 
 ## 5. Long Dwells (`*.longdwells.csv`)
 
 Lists dwells that exceed a certain duration threshold (default 6 hours), which might indicate a dropped tag or died animal.
 
 **Columns:**
+- `bin_number`: Sequence number of the time bin (0 for full experiment).
 - `bin_start`: Start timestamp of the bin.
 - `bin_end`: End timestamp of the bin.
+- `bin_duration`: Duration of the bin in seconds.
 - `animal`: Name of the animal.
 - `chamber`: Chamber where the long dwell occurred.
 - `start_time`: Timestamp when the dwell began.
@@ -94,8 +100,10 @@ Only generated if a validation file is provided.
 Compares inferred locations against a manual ground-truth validation file.
 
 **Columns:**
+- `bin_number`: Sequence number of the time bin (0 for full experiment).
 - `bin_start`: Start timestamp of the bin.
 - `bin_end`: End timestamp of the bin.
+- `bin_duration`: Duration of the bin in seconds.
 - `Correct`: `True` or `False`.
 - `Timestamp`: Time of the validation check.
 - `AnimalName`: Name of the animal.

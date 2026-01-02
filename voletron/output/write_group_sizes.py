@@ -37,6 +37,9 @@ def compute_group_sizes(
         start = bin.bin_start
         end = bin.bin_end
         
+        # Tracks time spent by each animal in groups of various sizes.
+        # Key: TagID, Value: List of durations where index is group size (e.g. index 2 is time spent in a pair).
+        # Obviously, the value for index 0 is always 0.
         tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = defaultdict(lambda: [DurationSeconds(0)] * 9)
 
         for group_dwell in analyzer.get_group_chamber_exclusive_durations():
@@ -51,45 +54,23 @@ def compute_group_sizes(
         for (tag_id, group_size_seconds) in tag_id_group_size_seconds.items():
             if analyzer.duration == 0:
                 avg_group_size = 0.0
-                sum_pair_time = 0.0
             else:
+                # Average size of the group this animal belongs to.
+                # Weighted sum: (group size * duration at that size) / total duration
                 avg_group_size = (
-                    sum(
-                        [
-                            group_size * seconds
-                            for (group_size, seconds) in enumerate(group_size_seconds)
-                        ]
-                    )
+                    sum(size * secs for size, secs in enumerate(group_size_seconds)) 
                     / analyzer.duration
                 )
-                
-                sum_pair_time = (
-                    sum(
-                        [
-                            (group_size_minus_two + 1) * seconds
-                            for (group_size_minus_two, seconds) in enumerate(
-                                group_size_seconds[2:]
-                            )
-                        ]
-                    )
-                    / analyzer.duration
-                )
-            
-            # Total time when an animal was not alone
+           
+            # Total time when an animal was not alone (group size >= 2)
             total_nosolo_seconds = sum(group_size_seconds[2:])
             # If the animal was always alone, then the average not-alone group size is undefined.
             if total_nosolo_seconds == 0:
                 avg_group_size_nosolo = "N/A"
             else:
+                # Average group size when excluding solo time
                 avg_group_size_nosolo = (
-                    sum(
-                        [
-                            (group_size_minus_two + 2) * seconds
-                            for (group_size_minus_two, seconds) in enumerate(
-                                group_size_seconds[2:]
-                            )
-                        ]
-                    )
+                    sum(size * secs for size, secs in enumerate(group_size_seconds[2:], start=2))
                     / total_nosolo_seconds
                 )
             
@@ -104,7 +85,6 @@ def compute_group_sizes(
                 size_seconds=size_secs_dict,
                 avg_group_size=avg_group_size,
                 avg_group_size_nosolo=avg_group_size_nosolo,
-                sum_pair_time=sum_pair_time,
             ))
     logging.debug(f"PROFILING: compute_group_sizes took {time.perf_counter() - t0:.3f} seconds")
     return rows
@@ -117,7 +97,7 @@ def write_group_sizes(
     group_sizes = range(0, 9)
 
     with open(os.path.join(out_dir, exp_name + ".group_size.csv"), "w") as f:
-        f.write("bin_number,bin_start,bin_end,bin_duration,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo,sum_pair_time\n")
+        f.write("bin_number,bin_start,bin_end,bin_duration,animal,1,2,3,4,5,6,7,8,avg_group_size,avg_group_size_nosolo\n")
         for row in rows:
             aaa = ",".join(map(lambda a: "{:.0f}".format(row.size_seconds.get(a, 0.0)), group_sizes[1:]))
             
@@ -128,7 +108,7 @@ def write_group_sizes(
             )
 
             f.write(
-                "{},{:.0f},{:.0f},{:.0f},{},{},{:.2f},{},{:.4f}\n".format(
+                "{},{:.0f},{:.0f},{:.0f},{},{},{:.2f},{}\n".format(
                     row.bin_number,
                     row.bin_start,
                     row.bin_end,
@@ -137,6 +117,5 @@ def write_group_sizes(
                     aaa,
                     row.avg_group_size,
                     avg_group_size_nosolo_str,
-                    row.sum_pair_time,
                 )
             )

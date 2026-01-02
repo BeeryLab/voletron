@@ -66,7 +66,6 @@ class GroupSizeRow:
     size_seconds: Dict[int, float]
     avg_group_size: float
     avg_group_size_nosolo: Union[float, str]
-    sum_pair_time: float
 
 @dataclass
 class LongDwellRow:

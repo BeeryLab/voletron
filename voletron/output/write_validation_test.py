@@ -90,7 +90,7 @@ class TestWriteValidation(unittest.TestCase):
             )
         ]
         
-        write_validation(rows, out_dir, exp_name)
+        write_validation(rows, out_dir, "test_exp", ChamberName("CentralA"))
         
         expected_file = os.path.join(out_dir, "test_exp.validate.csv")
         self.assertTrue(os.path.exists(expected_file))

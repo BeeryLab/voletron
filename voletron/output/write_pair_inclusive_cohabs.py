@@ -15,14 +15,18 @@
 
 import os
 from typing import List
-from voletron.types import AnimalConfig, TimestampSeconds, DurationSeconds
+from voletron.types import AnimalConfig, TimestampSeconds, DurationSeconds, TagID
 from voletron.output.types import PairCohabRow, OutputBin
 
 def compute_pair_inclusive_cohabs(
     config: AnimalConfig,
+    tag_ids: List[TagID],
     bins: List[OutputBin],
 ) -> List[PairCohabRow]:
     rows = []
+    
+    # Pre-calculate set for O(1) lookups
+    tag_id_set = set(tag_ids)
     
     for bin in bins:
         if bin.analyzer is None:
@@ -33,16 +37,19 @@ def compute_pair_inclusive_cohabs(
         
         for pair_dwell_aggregate in analyzer.get_pair_inclusive_stats():
             animal_a, animal_b = pair_dwell_aggregate.tag_ids
-            rows.append(PairCohabRow(
-                bin_number=bin.bin_number,
-                bin_start=start,
-                bin_end=end,
-                bin_duration=analyzer.duration,
-                animal_a_name=config.tag_id_to_name[animal_a],
-                animal_b_name=config.tag_id_to_name[animal_b],
-                dwell_count=pair_dwell_aggregate.count,
-                duration_seconds=pair_dwell_aggregate.duration_seconds,
-            ))
+            
+            # Only include pairs where BOTH animals belong to this habitat
+            if animal_a in tag_id_set and animal_b in tag_id_set:
+                rows.append(PairCohabRow(
+                    bin_number=bin.bin_number,
+                    bin_start=start,
+                    bin_end=end,
+                    bin_duration=analyzer.duration,
+                    animal_a_name=config.tag_id_to_name[animal_a],
+                    animal_b_name=config.tag_id_to_name[animal_b],
+                    dwell_count=pair_dwell_aggregate.count,
+                    duration_seconds=pair_dwell_aggregate.duration_seconds,
+                ))
     return rows
 
 def write_pair_inclusive_cohabs(

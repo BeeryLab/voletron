@@ -46,7 +46,8 @@ class TestWritePairInclusiveCohabs(unittest.TestCase):
             OutputBin(bin_number=0, bin_start=TimestampSeconds(0), bin_end=TimestampSeconds(20), analyzer=mock_analyzer_3)
         ]
 
-        rows = compute_pair_inclusive_cohabs(config, bins)
+        tag_ids = [TagID("tag1"), TagID("tag2")]
+        rows = compute_pair_inclusive_cohabs(config, tag_ids, bins)
 
         # Bin 1 (0-10): Overlap is 5 to 10. Duration 5.
         # Bin 2 (10-20): Overlap is 10 to 15. Duration 5.

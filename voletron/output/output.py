@@ -77,7 +77,7 @@ def write_outputs(
         tag_ids = [
             tag_id
             for (tag_id, start_chamber) in config.tag_id_to_start_chamber.items()
-            if start_chamber == desired_start_chamber
+            if start_chamber in chambers
         ]
 
         out_dir = os.path.join(olcusDir, "voletron", desired_start_chamber)
@@ -94,7 +94,7 @@ def write_outputs(
                 validations, 
                 bins
             )
-            write_validation(validation_rows, out_dir, exp_name)
+            write_validation(validation_rows, out_dir, exp_name, desired_start_chamber)
 
         chamber_time_rows = compute_chamber_times(
             config, 
@@ -117,6 +117,7 @@ def write_outputs(
 
         pair_cohab_rows = compute_pair_inclusive_cohabs(
             config, 
+            tag_ids,
             bins
         )
         write_pair_inclusive_cohabs(

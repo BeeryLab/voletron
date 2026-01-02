@@ -34,7 +34,7 @@ from voletron.co_dwell_accumulator import CoDwellAccumulator
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
 from voletron.constants import DEFAULT_TIME_BETWEEN_READS_THRESHOLD
-from voletron.types import Config, Read, TagID, TimestampSeconds, Validation
+from voletron.types import AnimalConfig, Read, TagID, TimestampSeconds, Validation
 from voletron.time_span_analyzer import TimeSpanAnalyzer
 
 

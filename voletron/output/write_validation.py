@@ -16,7 +16,7 @@
 import os
 import logging
 from typing import List, Dict, Set, Tuple
-from voletron.types import AnimalName, TagID, Validation, TimestampSeconds, DurationSeconds
+from voletron.types import AnimalName, TagID, Validation, TimestampSeconds, DurationSeconds, HabitatName
 from voletron.trajectory import AllAnimalTrajectories
 from voletron.util import format_time
 from voletron.output.types import ValidationRow, OutputBin
@@ -31,38 +31,38 @@ def compute_validation(
     rows = []
     relevant_validations = [vv for vv in validations if vv.tag_id in tag_ids]
     
-    for bin in bins:
-        b_start = bin.bin_start
-        b_end = bin.bin_end
-        for v in relevant_validations:
-            if v.timestamp >= b_start and v.timestamp < b_end:
-                # Charitably use a 2-minute window. Note: this logic looks at trajectory
-                # which is time-indexed. We should ensure we are checking the time specific 
-                # to the validation event, regardless of the bin we are currently "in",
-                # AS LONG AS the validation event itself falls in this bin.
-                # The validation logic (timestamp - 30 to timestamp + 90) stays the same relative
-                # to the validation timestamp.
-                
-                actual = trajectories.get_locations_between(
-                    v.tag_id, v.timestamp - 30, v.timestamp + 90
-                )
-                ok = v.chamber in actual
-                
-                rows.append(ValidationRow(
-                    bin_number=bin.bin_number,
-                    bin_start=b_start,
-                    bin_end=b_end,
-                    bin_duration=b_end - b_start,
-                    correct=ok,
-                    timestamp=v.timestamp,
-                    animal_name=tag_id_to_name[v.tag_id],
-                    expected_chamber=v.chamber,
-                    observed_chambers=actual
-                ))
+    bin = bin[0]
+    b_start = bin.bin_start
+    b_end = bin.bin_end
+    for v in relevant_validations:
+        if v.timestamp >= b_start and v.timestamp < b_end:
+            # Charitably use a 2-minute window. Note: this logic looks at trajectory
+            # which is time-indexed. We should ensure we are checking the time specific 
+            # to the validation event, regardless of the bin we are currently "in",
+            # AS LONG AS the validation event itself falls in this bin.
+            # The validation logic (timestamp - 30 to timestamp + 90) stays the same relative
+            # to the validation timestamp.
+            
+            actual = trajectories.get_locations_between(
+                v.tag_id, v.timestamp - 30, v.timestamp + 90
+            )
+            ok = v.chamber in actual
+            
+            rows.append(ValidationRow(
+                bin_number=bin.bin_number,
+                bin_start=b_start,
+                bin_end=b_end,
+                bin_duration=b_end - b_start,
+                correct=ok,
+                timestamp=v.timestamp,
+                animal_name=tag_id_to_name[v.tag_id],
+                expected_chamber=v.chamber,
+                observed_chambers=actual
+            ))
     return rows
 
-def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str) -> None:
-    logging.info("\nValidation:")
+def write_validation(rows: List[ValidationRow], out_dir: str, exp_name: str, habitat_name: HabitatName) -> None:
+    logging.info(f"\nValidation ({habitat_name}):")
     logging.info("-----------------------------")
 
     if rows:

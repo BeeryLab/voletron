@@ -44,12 +44,12 @@ APPARATUS_SPEC = {
 }
 
 # Automatically generate LOCATIONS from APPARATUS_SPEC
-LOCATIONS = {}
+ANTENNAS = {}
 for dev_id, antennas in APPARATUS_SPEC["olcus_devices"].items():
     for ant_id, info in antennas.items():
         # Name format: "{tube}_{cage}" (e.g., Tube1_CentralA, Tube1_Cage1)
         name = f"{info['tube']}_{info['cage']}"
-        LOCATIONS[name] = (int(dev_id), int(ant_id))
+        ANTENNAS[name] = (int(dev_id), int(ant_id))
 
 def write_apparatus():
     with open(os.path.join(DIR, APPARATUS_FILENAME), 'w') as f:
@@ -83,84 +83,109 @@ def write_validation():
             f.write(f"{ts_str},{name},{chamber}\n")
 
 def write_raw_data():
+    TRUTH_FILENAME = "ground_truth.csv"
+    
     events = []
+    ground_truth = []
     
     # Map "A" -> tag, etc.
     animal_tags = {a["name"].split("_")[1]: a["tag"] for a in ANIMALS}
+    # Initialize locations: "A": "CentralA", etc.
+    animal_locations = {a["name"].split("_")[1]: a["start"] for a in ANIMALS}
     
-    def add_event(seconds_offset, animal_suffix, location_key):
+    # --- Helper to record state ---
+    def record_state(seconds_offset):
+        ts = START_TIME + timedelta(seconds=seconds_offset)
+        row = {"Timestamp": int(ts.timestamp())}
+        for suffix in sorted(animal_locations.keys()):
+            row[f"Animal_{suffix}"] = animal_locations[suffix]
+        ground_truth.append(row)
+
+    def add_event(seconds_offset, animal_suffix, antenna_key, chamber_name):
         tag = animal_tags[animal_suffix]
-        device, antenna = LOCATIONS[location_key]
+        device, antenna = ANTENNAS[antenna_key]
         ts = START_TIME + timedelta(seconds=seconds_offset)
         # cantimestamp is just loose int, let's say 1000 * seconds
         cants = int(seconds_offset * 1000)
         events.append((cants, ts, device, antenna, tag))
+        
+        # Update ground truth
+        animal_locations[animal_suffix] = chamber_name
+        
+        # Record state after update
+        record_state(seconds_offset)
 
     # --- BIN 1 (0 - 300s) ---
+    # Experiment Start State (T=0)
+    record_state(0.0)
+
     # Setup: A & B to Cage 1, C to Cage 2, D to Cage 3
     # Just after start (T=1s)
-    add_event(1.0, "A", "Tube1_CentralA") # A at CentralA
-    add_event(2.0, "A", "Tube1_Cage1")    # A enters Cage1
+    add_event(1.0, "A", "Tube1_CentralA", "CentralA") # A at CentralA
+    add_event(2.0, "A", "Tube1_Cage1", "Cage1")    # A enters Cage1
     
-    add_event(3.0, "B", "Tube1_CentralA") # B at CentralA
-    add_event(4.0, "B", "Tube1_Cage1")    # B enters Cage1
+    add_event(3.0, "B", "Tube1_CentralA", "CentralA") # B at CentralA
+    add_event(4.0, "B", "Tube1_Cage1", "Cage1")    # B enters Cage1
     
-    add_event(5.0, "C", "Tube2_CentralA") # C at CentralA
-    add_event(6.0, "C", "Tube2_Cage2")    # C enters Cage2
+    add_event(5.0, "C", "Tube2_CentralA", "CentralA") # C at CentralA
+    add_event(6.0, "C", "Tube2_Cage2", "Cage2")    # C enters Cage2
     
-    add_event(7.0, "D", "Tube3_CentralA") # D at CentralA
-    add_event(8.0, "D", "Tube3_Cage3")    # D enters Cage3
+    add_event(7.0, "D", "Tube3_CentralA", "CentralA") # D at CentralA
+    add_event(8.0, "D", "Tube3_Cage3", "Cage3")    # D enters Cage3
     
     # Refresh reads at T=150s (mid-bin) to keep them alive
-    add_event(150.0, "A", "Tube1_Cage1")
-    add_event(151.0, "B", "Tube1_Cage1")
-    add_event(152.0, "C", "Tube2_Cage2")
-    add_event(153.0, "D", "Tube3_Cage3")
+    # add_event(150.0, "A", "Tube1_Cage1")
+    # add_event(151.0, "B", "Tube1_Cage1")
+    # add_event(152.0, "C", "Tube2_Cage2")
+    # add_event(153.0, "D", "Tube3_Cage3")
 
     # --- BIN 2 (300 - 600s) ---
     # A moves from Cage 1 to Cage 2 (Joins C)
     # T=310s
-    add_event(310.0, "A", "Tube1_Cage1")    # A leaving Cage1
-    add_event(312.0, "A", "Tube1_CentralA") # A in Central
-    add_event(315.0, "A", "Tube2_CentralA") # A near Cage2
-    add_event(318.0, "A", "Tube2_Cage2")    # A enters Cage2
+    add_event(310.0, "A", "Tube1_Cage1", "Tube1")    # A leaving Cage1
+    add_event(312.0, "A", "Tube1_CentralA", "CentralA") # A in Central
+    add_event(315.0, "A", "Tube2_CentralA", "Tube2") # A near Cage2
+    add_event(318.0, "A", "Tube2_Cage2", "Cage2")    # A enters Cage2
     
     # Others stay put, refresh at T=450
-    add_event(450.0, "B", "Tube1_Cage1") # B still alone in Cage1
-    add_event(451.0, "C", "Tube2_Cage2") # C with A in Cage2
-    add_event(452.0, "A", "Tube2_Cage2") # A with C in Cage2
-    add_event(453.0, "D", "Tube3_Cage3") # D still alone in Cage3
+    # add_event(450.0, "B", "Tube1_Cage1") # B still alone in Cage1
+    # add_event(451.0, "C", "Tube2_Cage2") # C with A in Cage2
+    # add_event(452.0, "A", "Tube2_Cage2") # A with C in Cage2
+    # add_event(453.0, "D", "Tube3_Cage3") # D still alone in Cage3
 
     # --- BIN 3 (600 - 900s) ---
     # Everyone moves to Cage 4
     # T=610
     
     # A & C leave Cage 2
-    add_event(610.0, "A", "Tube2_Cage2")
-    add_event(612.0, "A", "Tube2_CentralA")
-    add_event(611.0, "C", "Tube2_Cage2")
-    add_event(613.0, "C", "Tube2_CentralA")
+    add_event(610.0, "A", "Tube2_Cage2", "Tube2")
+    add_event(611.0, "A", "Tube2_CentralA", "CentralA")
+    add_event(612.0, "C", "Tube2_Cage2", "Tube2")
+    add_event(613.0, "C", "Tube2_CentralA", "CentralA")
     
     # B leaves Cage 1
-    add_event(615.0, "B", "Tube1_Cage1")
-    add_event(617.0, "B", "Tube1_CentralA")
+    add_event(615.0, "B", "Tube1_Cage1", "Tube1")
+    add_event(617.0, "B", "Tube1_CentralA", "CentralA")
 
     # D leaves Cage 3
-    add_event(620.0, "D", "Tube3_Cage3")
-    add_event(622.0, "D", "Tube3_CentralA")
+    add_event(620.0, "D", "Tube3_Cage3", "Tube3")
+    add_event(622.0, "D", "Tube3_CentralA", "CentralA")
     
     # All enter Cage 4 around T=650
-    add_event(650.0, "A", "Tube4_CentralA")
-    add_event(652.0, "A", "Tube4_Cage4")
+    add_event(650.0, "A", "Tube4_CentralA", "Tube4")
+    add_event(651.0, "A", "Tube4_Cage4", "Cage4")
     
-    add_event(651.0, "B", "Tube4_CentralA")
-    add_event(653.0, "B", "Tube4_Cage4")
+    add_event(652.0, "B", "Tube4_CentralA", "Tube4")
+    add_event(653.0, "B", "Tube4_Cage4", "Cage4")
     
-    add_event(654.0, "C", "Tube4_CentralA")
-    add_event(656.0, "C", "Tube4_Cage4")
+    add_event(654.0, "C", "Tube4_CentralA", "Tube4")
+    add_event(655.0, "C", "Tube4_Cage4", "Cage4")
     
-    add_event(655.0, "D", "Tube4_CentralA")
-    add_event(657.0, "D", "Tube4_Cage4")
+    add_event(656.0, "D", "Tube4_CentralA", "Tube4")
+    add_event(657.0, "D", "Tube4_Cage4", "Cage4")
+
+    # End of Experiment State (T=900)
+    record_state(900.0)
 
     # Write file
     with open(os.path.join(DIR, RAW_FILENAME), 'w') as f:
@@ -169,6 +194,13 @@ def write_raw_data():
             # Format: 25.08.2020 15:04:56:974
             ts_str = ts.strftime("%d.%m.%Y %H:%M:%S:%f")[:-3]
             f.write(f"{cants};{ts_str};{device};{antenna};{tag}\n")
+            
+    # Write ground truth
+    with open(os.path.join(DIR, TRUTH_FILENAME), 'w') as f:
+        fieldnames = ["Timestamp"] + [f"Animal_{s}" for s in sorted(animal_locations.keys())]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(ground_truth)
 
 if __name__ == "__main__":
     os.makedirs(DIR, exist_ok=True)

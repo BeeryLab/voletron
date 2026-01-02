@@ -48,3 +48,12 @@ The test also generates a `validation.csv` file with 4 entries to verify the val
 2.  **Correct**: Animal_C in Cage 2 at T=100s.
 3.  **Correct**: Animal_A in Cage 2 at T=400s.
 4.  **Incorrect**: Animal_B in Cage 2 at T=400s (Observed: Cage 1).
+
+### Ground Truth Data
+The test also generates a `ground_truth.csv` file containing the precise location of every animal at every event timestamp.
+
+*   **Timestamp**: Integer seconds since epoch (e.g., `1641067201`).
+*   **Animal Columns**: One column per animal (e.g., `Animal_A`, `Animal_B`).
+*   **Values**: The simplified chamber name where the animal is located (e.g., `Cage1`, `CentralA`, `Tube1`).
+
+This file serves as a granular truth source for debugging specific timepoints.

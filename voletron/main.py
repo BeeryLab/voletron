@@ -188,6 +188,7 @@ def main(argv=None):
         file_handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(file_handler)
         logging.info("Command: {}".format(" ".join(argv)))
+        logging.info("Start time: {}\n".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     except Exception as e:
         logging.warning(f"Failed to setup log.txt: {e}")
 

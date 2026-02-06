@@ -205,7 +205,6 @@ class TestAnimalTrajectory(unittest.TestCase):
             t.dwells,
             [
                 Dwell(TimestampSeconds(12345), TimestampSeconds(12345), CHAMBER_OUTSIDE),
-                # Arena dwell extended
                 Dwell(TimestampSeconds(12345), TimestampSeconds(23456), ChamberName("CentralA")),
                 Dwell(TimestampSeconds(23456), TimestampSeconds(34567), ChamberName("Tube1")),
                 Dwell(TimestampSeconds(34567), TimestampSeconds(45678), CHAMBER_ERROR),
@@ -401,7 +400,7 @@ class TestAllAnimalTrajectories(unittest.TestCase):
             ],
         }
 
-        t = AllAnimalTrajectories(start_time, tag_id_to_start_chamber, reads_per_animal, 10.0)
+        t = AllAnimalTrajectories(start_time, TimestampSeconds(1300), tag_id_to_start_chamber, reads_per_animal, 10.0)
 
         self.assertEqual(
             list(t.traversals()),

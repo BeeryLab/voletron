@@ -240,6 +240,11 @@ merchantability, or fitness for a particular purpose.
 
 ## Changelog
 
+Version 2.01
+- Add CITATION.cff.
+- Improve robustness of pair inclusive cohabs output wrt. stationary animals,
+  and add tests for this.
+
 Version 2.0
 - Complete refactoring / rewrite.
 - Output cohab in tubes, not just in cages.

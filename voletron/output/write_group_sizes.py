@@ -40,7 +40,9 @@ def compute_group_sizes(
         # Tracks time spent by each animal in groups of various sizes.
         # Key: TagID, Value: List of durations where index is group size (e.g. index 2 is time spent in a pair).
         # Obviously, the value for index 0 is always 0.
-        tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = defaultdict(lambda: [DurationSeconds(0)] * 9)
+        tag_id_group_size_seconds : Dict[TagID, List[DurationSeconds]] = {
+            tag_id: [DurationSeconds(0)] * 9 for tag_id in tag_ids
+        }
 
         for group_dwell in analyzer.get_group_chamber_exclusive_durations():
             for tag_id in group_dwell.tag_ids:
@@ -51,7 +53,8 @@ def compute_group_sizes(
                         len(group_dwell.tag_ids)
                     ] + group_dwell.duration_seconds)
 
-        for (tag_id, group_size_seconds) in tag_id_group_size_seconds.items():
+        for tag_id in tag_ids:
+            group_size_seconds = tag_id_group_size_seconds[tag_id]
             if analyzer.duration == 0:
                 avg_group_size = 0.0
             else:

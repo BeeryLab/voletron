@@ -17,7 +17,7 @@ import os
 import time
 import logging
 from typing import List, Tuple
-from voletron.types import AnimalConfig, TimestampSeconds, DurationSeconds, TagID
+from voletron.types import AnimalConfig, DurationSeconds, TagID, CHAMBER_ERROR
 from voletron.output.types import PairCohabRow, OutputBin
 
 def compute_pair_inclusive_cohabs(
@@ -28,9 +28,15 @@ def compute_pair_inclusive_cohabs(
     t0 = time.perf_counter()
     rows = []
     
-    # Pre-calculate set for O(1) lookups
     tag_id_set = set(tag_ids)
     
+    # Pre-calculate all valid pairs for this habitat
+    all_pairs = []
+    sorted_tag_ids = sorted(tag_ids)
+    for i in range(len(sorted_tag_ids)):
+        for j in range(i + 1, len(sorted_tag_ids)):
+            all_pairs.append((sorted_tag_ids[i], sorted_tag_ids[j]))
+
     for bin in bins:
         if bin.analyzer is None:
              continue
@@ -38,21 +44,68 @@ def compute_pair_inclusive_cohabs(
         start = bin.bin_start
         end = bin.bin_end
         
-        for pair_dwell_aggregate in analyzer.get_pair_inclusive_stats():
-            animal_a, animal_b = pair_dwell_aggregate.tag_ids
+        # Map pair -> aggregate
+        stats_map = {}
+        for agg in analyzer.get_pair_inclusive_stats():
+            # agg.tag_ids is a list [tag_a, tag_b]
+            pair_key = tuple(sorted(agg.tag_ids))
+            stats_map[pair_key] = agg
             
-            # Only include pairs where BOTH animals belong to this habitat
-            if animal_a in tag_id_set and animal_b in tag_id_set:
-                rows.append(PairCohabRow(
-                    bin_number=bin.bin_number,
-                    bin_start=start,
-                    bin_end=end,
-                    bin_duration=analyzer.duration,
-                    animal_a_name=config.tag_id_to_name[animal_a],
-                    animal_b_name=config.tag_id_to_name[animal_b],
-                    dwell_count=pair_dwell_aggregate.count,
-                    duration_seconds=pair_dwell_aggregate.duration_seconds,
-                ))
+        for (animal_a, animal_b) in all_pairs:
+            pair_key = (animal_a, animal_b)
+            
+            if pair_key in stats_map:
+                agg = stats_map[pair_key]
+                count = agg.count
+                duration = agg.duration_seconds
+            else:
+                count = 0
+                duration = DurationSeconds(0)
+
+            rows.append(PairCohabRow(
+                bin_number=bin.bin_number,
+                bin_start=start,
+                bin_end=end,
+                bin_duration=analyzer.duration,
+                animal_a_name=config.tag_id_to_name[animal_a],
+                animal_b_name=config.tag_id_to_name[animal_b],
+                dwell_count=count,
+                duration_seconds=duration,
+            ))
+
+
+        # Add Unknown/Error rows
+        # For each animal, calculate total time in CHAMBER_ERROR
+        # A group dwell in ERROR contributes to this.
+        # We assume "solo in Error" or "group in Error" all counts as "Unknown location time".
+        
+        tag_id_error_stats = {tid: {"count": 0, "duration": 0.0} for tid in tag_ids}
+        
+        for g in analyzer.get_group_chamber_exclusive_durations():
+             if g.chamber == CHAMBER_ERROR:
+                 for tid in g.tag_ids:
+                     if tid in tag_id_error_stats:
+                         tag_id_error_stats[tid]["count"] += g.count
+                         tag_id_error_stats[tid]["duration"] += g.duration_seconds
+
+        for tag_id in sorted_tag_ids:
+             stat = tag_id_error_stats[tag_id]
+             
+             # Only include if there is actual error time, to reduce clutter.
+             if stat["duration"] == 0 and stat["count"] == 0:
+                 continue
+             
+             rows.append(PairCohabRow(
+                bin_number=bin.bin_number,
+                bin_start=start,
+                bin_end=end,
+                bin_duration=analyzer.duration,
+                animal_a_name=config.tag_id_to_name[tag_id],
+                animal_b_name="UNKNOWN",
+                dwell_count=stat["count"],
+                duration_seconds=DurationSeconds(stat["duration"]),
+            ))
+            
     logging.debug(f"PROFILING: compute_pair_inclusive_cohabs took {time.perf_counter() - t0:.3f} seconds")
     return rows
 
